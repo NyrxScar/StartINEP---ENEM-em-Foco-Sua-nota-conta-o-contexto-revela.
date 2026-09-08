@@ -1,0 +1,82 @@
+edicao: 2025
+versao_contrato: 1
+
+fonte:
+  url: "https://download.inep.gov.br/microdados/microdados_enem_2025.zip"
+  arquivo_csv: "microdados_enem_2025/DADOS/PARTICIPANTES_2025.csv"
+  separador: ";"
+  encoding: "latin-1"
+
+# Em 2025 o INEP so publicou PARTICIPANTES_2025.csv: nao existe
+# RESULTADOS_2025.csv no ZIP (verificado com zipfile.namelist() —
+# ITENS_PROVA_2025.csv e PARTICIPANTES_2025.csv sao os dois CSVs do pacote).
+# Esta edicao entra no produto como perfil de inscritos sem nota: tem o
+# questionario socioeconomico e os dados demograficos, mas nenhuma nota nem
+# situacao de presenca por prova, porque esses dados simplesmente ainda nao
+# foram publicados nesta estrutura.
+
+# canonico: COLUNA_DE_ORIGEM
+mapeamento:
+  ano: NU_ANO
+  uf_prova: SG_UF_PROVA
+  faixa_etaria: TP_FAIXA_ETARIA
+  sexo: TP_SEXO
+  cor_raca: TP_COR_RACA
+  treineiro: IN_TREINEIRO
+  renda_familiar: Q006
+  escolaridade_pai: Q001
+  escolaridade_mae: Q002
+
+derivadas:
+  regiao: regiao_por_uf
+
+# PARTICIPANTES_2025.csv (38 colunas) nao traz TP_ESCOLA nem
+# TP_DEPENDENCIA_ADM_ESC (os dados de escola nao estao neste arquivo), e nao
+# traz nenhuma coluna de nota (NU_NOTA_*) nem de presenca (TP_PRESENCA_*):
+# nao existe RESULTADOS_2025.csv no pacote desta edicao para fornece-las.
+ausentes:
+  tipo_escola: >-
+    TP_ESCOLA nao existe entre as 38 colunas de PARTICIPANTES_2025.csv. O
+    INEP nao publicou, para 2025, um arquivo com os dados de escola do ensino
+    medio equivalentes ao que MICRODADOS_ENEM_2023 trazia. Ver ADR-0004.
+  dependencia_adm_escola: >-
+    TP_DEPENDENCIA_ADM_ESC nao existe entre as 38 colunas de
+    PARTICIPANTES_2025.csv. Assim como TP_ESCOLA, os dados de escola nao
+    foram publicados para esta edicao. Ver ADR-0004.
+  presenca_cn: >-
+    TP_PRESENCA_CN nao esta em PARTICIPANTES_2025.csv. Ate a data deste
+    contrato o INEP nao publicou um RESULTADOS_2025.csv (nao existe no ZIP);
+    presenca e nota so existem uma vez que essa segunda parte da edicao seja
+    disponibilizada. Ver ADR-0004.
+  presenca_ch: >-
+    TP_PRESENCA_CH nao esta em PARTICIPANTES_2025.csv pelo mesmo motivo de
+    TP_PRESENCA_CN: nao ha RESULTADOS_2025.csv publicado nesta edicao. Ver
+    ADR-0004.
+  presenca_lc: >-
+    TP_PRESENCA_LC nao esta em PARTICIPANTES_2025.csv pelo mesmo motivo de
+    TP_PRESENCA_CN: nao ha RESULTADOS_2025.csv publicado nesta edicao. Ver
+    ADR-0004.
+  presenca_mt: >-
+    TP_PRESENCA_MT nao esta em PARTICIPANTES_2025.csv pelo mesmo motivo de
+    TP_PRESENCA_CN: nao ha RESULTADOS_2025.csv publicado nesta edicao. Ver
+    ADR-0004.
+  nota_cn: >-
+    NU_NOTA_CN nao esta em PARTICIPANTES_2025.csv. As notas ficariam num
+    RESULTADOS_2025.csv que o INEP ainda nao publicou para esta edicao (nao
+    consta no ZIP). Ver ADR-0004.
+  nota_ch: >-
+    NU_NOTA_CH nao esta em PARTICIPANTES_2025.csv pelo mesmo motivo de
+    NU_NOTA_CN: o arquivo de resultados desta edicao nao foi publicado. Ver
+    ADR-0004.
+  nota_lc: >-
+    NU_NOTA_LC nao esta em PARTICIPANTES_2025.csv pelo mesmo motivo de
+    NU_NOTA_CN: o arquivo de resultados desta edicao nao foi publicado. Ver
+    ADR-0004.
+  nota_mt: >-
+    NU_NOTA_MT nao esta em PARTICIPANTES_2025.csv pelo mesmo motivo de
+    NU_NOTA_CN: o arquivo de resultados desta edicao nao foi publicado. Ver
+    ADR-0004.
+  nota_redacao: >-
+    NU_NOTA_REDACAO nao esta em PARTICIPANTES_2025.csv pelo mesmo motivo de
+    NU_NOTA_CN: o arquivo de resultados desta edicao nao foi publicado. Ver
+    ADR-0004.

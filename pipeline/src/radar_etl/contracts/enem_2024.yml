@@ -1,0 +1,87 @@
+edicao: 2024
+versao_contrato: 1
+
+fonte:
+  url: "https://download.inep.gov.br/microdados/microdados_enem_2024.zip"
+  arquivo_csv: "microdados_enem_2024/DADOS/RESULTADOS_2024.csv"
+  separador: ";"
+  encoding: "latin-1"
+
+# A partir de 2024 o INEP passou a publicar dois arquivos por edicao dentro do
+# mesmo ZIP: RESULTADOS_2024.csv (chave NU_SEQUENCIAL, 4.332.944 linhas, tem as
+# notas e a presenca por area) e PARTICIPANTES_2024.csv (chave NU_INSCRICAO,
+# tambem 4.332.944 linhas, tem o perfil socioeconomico e a escola). As duas
+# chaves nao sao a mesma coluna, nao estao na mesma ordem e nao ha coluna em
+# comum que permita o join: a linha 1 de RESULTADOS e de Aratuba/CE e a linha 1
+# de PARTICIPANTES e de Porto Alegre/RS (verificado lendo a segunda linha de
+# cada CSV). Isso e a des-identificacao deliberada descrita no RIPD dos
+# microdados do ENEM (INEP), nao um defeito do arquivo nem uma chave que falta
+# por acidente. Por isso este contrato ingere so RESULTADOS_2024.csv:
+# PARTICIPANTES_2024 fica de fora (ver ADR-0004) porque juntar os dois criaria
+# duas populacoes do mesmo ano sem forma valida de relacionar uma pessoa com a
+# outra.
+
+# canonico: COLUNA_DE_ORIGEM
+mapeamento:
+  ano: NU_ANO
+  uf_prova: SG_UF_PROVA
+  dependencia_adm_escola: TP_DEPENDENCIA_ADM_ESC
+  presenca_cn: TP_PRESENCA_CN
+  presenca_ch: TP_PRESENCA_CH
+  presenca_lc: TP_PRESENCA_LC
+  presenca_mt: TP_PRESENCA_MT
+  nota_cn: NU_NOTA_CN
+  nota_ch: NU_NOTA_CH
+  nota_lc: NU_NOTA_LC
+  nota_mt: NU_NOTA_MT
+  nota_redacao: NU_NOTA_REDACAO
+
+derivadas:
+  regiao: regiao_por_uf
+
+# RESULTADOS_2024.csv (42 colunas) nao traz nenhuma coluna Q0xx do questionario
+# socioeconomico nem os codigos TP_FAIXA_ETARIA/TP_SEXO/TP_COR_RACA/TP_ESCOLA/
+# IN_TREINEIRO: essas colunas existem apenas em PARTICIPANTES_2024.csv, que nao
+# e ingerido por esta edicao (ver comentario acima e ADR-0004). Declarar essas
+# 8 colunas aqui como NULL na Prata, em vez de omiti-las do contrato, e o que
+# torna a lacuna visivel e rastreavel em vez de silenciosa.
+ausentes:
+  faixa_etaria: >-
+    TP_FAIXA_ETARIA nao esta em RESULTADOS_2024.csv; vive em
+    PARTICIPANTES_2024.csv, que usa NU_INSCRICAO como chave (RESULTADOS usa
+    NU_SEQUENCIAL) e por isso nao e juntavel a esta edicao. Ver ADR-0004.
+  sexo: >-
+    TP_SEXO nao esta em RESULTADOS_2024.csv; vive em PARTICIPANTES_2024.csv,
+    que o INEP publica com chave propria (NU_INSCRICAO) desassociada da chave
+    de RESULTADOS (NU_SEQUENCIAL), sem coluna em comum para o join. Ver
+    ADR-0004.
+  cor_raca: >-
+    TP_COR_RACA nao esta em RESULTADOS_2024.csv; vive em
+    PARTICIPANTES_2024.csv, cuja chave (NU_INSCRICAO, ordenada) nao corresponde
+    a chave de RESULTADOS (NU_SEQUENCIAL, embaralhada) — nao ha como relacionar
+    as duas linhas. Ver ADR-0004.
+  tipo_escola: >-
+    TP_ESCOLA nao existe em nenhuma das 42 colunas de RESULTADOS_2024.csv (so
+    TP_DEPENDENCIA_ADM_ESC sobrevive nesse arquivo); o tipo de escola do ensino
+    medio propriamente dito ficou em PARTICIPANTES_2024.csv, inacessivel a
+    partir das notas nesta edicao. Ver ADR-0004.
+  treineiro: >-
+    IN_TREINEIRO nao esta em RESULTADOS_2024.csv; vive em
+    PARTICIPANTES_2024.csv, que nao e ingerido porque sua chave
+    (NU_INSCRICAO) nao se junta a chave de RESULTADOS (NU_SEQUENCIAL). Ver
+    ADR-0004.
+  renda_familiar: >-
+    Q006 (renda familiar) faz parte do questionario socioeconomico, que o INEP
+    moveu inteiro para PARTICIPANTES_2024.csv a partir de 2024. Esse arquivo
+    nao e ingerido porque nao ha chave em comum com RESULTADOS_2024.csv para
+    juntar renda a nota. Ver ADR-0004.
+  escolaridade_pai: >-
+    Q001 (escolaridade do pai) faz parte do questionario socioeconomico,
+    publicado so em PARTICIPANTES_2024.csv a partir de 2024. Sem chave em
+    comum com RESULTADOS_2024.csv, essa resposta nao pode ser associada a nota
+    do participante nesta edicao. Ver ADR-0004.
+  escolaridade_mae: >-
+    Q002 (escolaridade da mae) faz parte do questionario socioeconomico,
+    publicado so em PARTICIPANTES_2024.csv a partir de 2024. Sem chave em
+    comum com RESULTADOS_2024.csv, essa resposta nao pode ser associada a nota
+    do participante nesta edicao. Ver ADR-0004.

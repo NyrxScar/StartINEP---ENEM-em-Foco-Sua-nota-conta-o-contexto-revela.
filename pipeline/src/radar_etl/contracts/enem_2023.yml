@@ -1,0 +1,44 @@
+edicao: 2023
+versao_contrato: 1
+
+fonte:
+  url: "https://download.inep.gov.br/microdados/microdados_enem_2023.zip"
+  arquivo_csv: "microdados_enem_2023/DADOS/MICRODADOS_ENEM_2023.csv"
+  separador: ";"
+  encoding: "latin-1"
+
+# 2023 e a base principal do produto: arquivo unico, 76 colunas, com as notas e
+# o perfil socioeconomico na mesma linha (mesmo NU_INSCRICAO). E a unica das
+# tres edicoes que sustenta o corte "nota x perfil socioeconomico" completo.
+
+# canonico: COLUNA_DE_ORIGEM
+mapeamento:
+  ano: NU_ANO
+  uf_prova: SG_UF_PROVA
+  faixa_etaria: TP_FAIXA_ETARIA
+  sexo: TP_SEXO
+  cor_raca: TP_COR_RACA
+  tipo_escola: TP_ESCOLA
+  dependencia_adm_escola: TP_DEPENDENCIA_ADM_ESC
+  treineiro: IN_TREINEIRO
+  renda_familiar: Q006
+  escolaridade_pai: Q001
+  escolaridade_mae: Q002
+  presenca_cn: TP_PRESENCA_CN
+  presenca_ch: TP_PRESENCA_CH
+  presenca_lc: TP_PRESENCA_LC
+  presenca_mt: TP_PRESENCA_MT
+  nota_cn: NU_NOTA_CN
+  nota_ch: NU_NOTA_CH
+  nota_lc: NU_NOTA_LC
+  nota_mt: NU_NOTA_MT
+  nota_redacao: NU_NOTA_REDACAO
+
+derivadas:
+  regiao: regiao_por_uf
+
+# 2023 cobre as 20 colunas mapeadas no cabecalho real (verificado via
+# zipfile.namelist() + leitura do header de
+# microdados_enem_2023/DADOS/MICRODADOS_ENEM_2023.csv, 76 colunas ao todo).
+# Nenhuma coluna canonica falta nesta edicao.
+ausentes: {}
