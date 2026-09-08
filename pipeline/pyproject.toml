@@ -32,3 +32,8 @@ pythonpath = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+[tool.ruff.lint]
+# Conjunto fixado deliberadamente: um default nao fixado faz um upgrade do ruff
+# quebrar o lint em codigo intocado.
+select = ["E", "F", "I", "UP", "B"]

@@ -48,7 +48,11 @@ def test_baixar_propaga_erro_http(tmp_path):
         return httpx.Response(404)
 
     with pytest.raises(httpx.HTTPStatusError):
-        baixar("https://exemplo.invalido/a.zip", tmp_path / "x.zip", cliente=_cliente_falso(handler))
+        baixar(
+            "https://exemplo.invalido/a.zip",
+            tmp_path / "x.zip",
+            cliente=_cliente_falso(handler),
+        )
 
 
 def test_extrair_csv_recupera_o_arquivo_pedido(tmp_path):
