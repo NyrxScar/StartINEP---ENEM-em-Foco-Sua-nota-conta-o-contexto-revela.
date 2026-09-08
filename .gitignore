@@ -216,3 +216,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---- Radar ENEM: dados do INEP nunca sao versionados ----
+data/bronze/
+data/silver/
+data/gold/
+*.csv
+*.parquet
+*.zip
+# Manifestos SAO versionados: sao a linhagem auditavel
+!data/_manifests/
+!data/_manifests/**
