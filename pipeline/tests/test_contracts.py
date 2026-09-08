@@ -124,3 +124,111 @@ def test_contrato_inexistente_falha_apontando_o_caminho(tmp_path):
         carregar_contrato(1998, canonico, diretorio=tmp_path)
 
     assert "enem_1998.yml" in str(erro.value)
+
+
+def test_contrato_com_coluna_ausente_e_justificativa_real_e_valido(tmp_path):
+    _escrever(tmp_path / "canonical.yml", CANONICO_MINIMO)
+    canonico = carregar_canonico(tmp_path / "canonical.yml")
+    _escrever(
+        tmp_path / "enem_2024.yml",
+        {
+            "edicao": 2024,
+            "versao_contrato": 1,
+            "fonte": {
+                "url": "https://exemplo.invalido/a.zip",
+                "arquivo_csv": "D/A.csv",
+                "separador": ";",
+                "encoding": "latin-1",
+            },
+            "mapeamento": {"ano": "NU_ANO", "uf_prova": "SG_UF_PROVA"},
+            "derivadas": {"regiao": "regiao_por_uf"},
+            "ausentes": {
+                "nota_mt": (
+                    "Nao presente nesta edicao: a nota fica em outro arquivo, "
+                    "sem chave em comum com este."
+                )
+            },
+        },
+    )
+
+    contrato = carregar_contrato(2024, canonico, diretorio=tmp_path)
+
+    assert contrato.ausentes["nota_mt"].startswith("Nao presente")
+
+
+def test_contrato_com_coluna_em_lugar_nenhum_e_rejeitado(tmp_path):
+    _escrever(tmp_path / "canonical.yml", CANONICO_MINIMO)
+    canonico = carregar_canonico(tmp_path / "canonical.yml")
+    _escrever(
+        tmp_path / "enem_2024.yml",
+        {
+            "edicao": 2024,
+            "versao_contrato": 1,
+            "fonte": {
+                "url": "https://exemplo.invalido/a.zip",
+                "arquivo_csv": "D/A.csv",
+                "separador": ";",
+                "encoding": "latin-1",
+            },
+            "mapeamento": {"ano": "NU_ANO", "uf_prova": "SG_UF_PROVA"},
+            "derivadas": {"regiao": "regiao_por_uf"},
+            "ausentes": {},
+        },
+    )
+
+    with pytest.raises(ContratoInvalido) as erro:
+        carregar_contrato(2024, canonico, diretorio=tmp_path)
+
+    assert "nota_mt" in str(erro.value)
+
+
+def test_contrato_com_coluna_em_mapeamento_e_ausentes_e_rejeitado(tmp_path):
+    _escrever(tmp_path / "canonical.yml", CANONICO_MINIMO)
+    canonico = carregar_canonico(tmp_path / "canonical.yml")
+    _escrever(
+        tmp_path / "enem_2024.yml",
+        {
+            "edicao": 2024,
+            "versao_contrato": 1,
+            "fonte": {
+                "url": "https://exemplo.invalido/a.zip",
+                "arquivo_csv": "D/A.csv",
+                "separador": ";",
+                "encoding": "latin-1",
+            },
+            "mapeamento": {"ano": "NU_ANO", "uf_prova": "SG_UF_PROVA", "nota_mt": "NU_NOTA_MT"},
+            "derivadas": {"regiao": "regiao_por_uf"},
+            "ausentes": {"nota_mt": "Justificativa real, mas a coluna ja esta mapeada."},
+        },
+    )
+
+    with pytest.raises(ContratoInvalido) as erro:
+        carregar_contrato(2024, canonico, diretorio=tmp_path)
+
+    assert "nota_mt" in str(erro.value)
+
+
+def test_contrato_com_justificativa_vazia_em_ausentes_e_rejeitado(tmp_path):
+    _escrever(tmp_path / "canonical.yml", CANONICO_MINIMO)
+    canonico = carregar_canonico(tmp_path / "canonical.yml")
+    _escrever(
+        tmp_path / "enem_2024.yml",
+        {
+            "edicao": 2024,
+            "versao_contrato": 1,
+            "fonte": {
+                "url": "https://exemplo.invalido/a.zip",
+                "arquivo_csv": "D/A.csv",
+                "separador": ";",
+                "encoding": "latin-1",
+            },
+            "mapeamento": {"ano": "NU_ANO", "uf_prova": "SG_UF_PROVA"},
+            "derivadas": {"regiao": "regiao_por_uf"},
+            "ausentes": {"nota_mt": "   "},
+        },
+    )
+
+    with pytest.raises(ContratoInvalido) as erro:
+        carregar_contrato(2024, canonico, diretorio=tmp_path)
+
+    assert "nota_mt" in str(erro.value)

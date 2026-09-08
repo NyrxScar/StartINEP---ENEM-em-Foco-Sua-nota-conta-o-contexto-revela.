@@ -36,6 +36,7 @@ class ContratoEdicao(BaseModel):
     fonte: FonteEdicao
     mapeamento: dict[str, str]
     derivadas: dict[str, str] = {}
+    ausentes: dict[str, str] = {}
 
 
 def carregar_canonico(caminho: Path | None = None) -> SchemaCanonico:
@@ -52,7 +53,10 @@ def carregar_contrato(
     """Carrega e valida o contrato de uma edicao contra o schema canonico.
 
     A validacao cruzada e o ponto do exercicio: um contrato so e valido se cobre
-    exatamente as colunas canonicas, sem faltar nenhuma e sem inventar nenhuma.
+    exatamente as colunas canonicas, sem faltar nenhuma e sem inventar nenhuma. Cada
+    coluna canonica precisa aparecer em exatamente um dos tres conjuntos -
+    `mapeamento`, `derivadas` ou `ausentes`. Uma edicao que nao consegue fornecer uma
+    coluna declara isso em `ausentes` com uma justificativa real; nunca em silencio.
     """
     diretorio = diretorio or DIRETORIO_PADRAO
     caminho = diretorio / f"enem_{edicao}.yml"
@@ -69,8 +73,22 @@ def carregar_contrato(
     except ValidationError as erro:
         raise ContratoInvalido(f"Contrato malformado em {caminho}:\n{erro}") from erro
 
-    cobertas = set(contrato.mapeamento) | set(contrato.derivadas)
+    mapeadas = set(contrato.mapeamento)
+    derivadas = set(contrato.derivadas)
+    ausentes = set(contrato.ausentes)
     esperadas = set(canonico.colunas)
+
+    duplicadas = (
+        (mapeadas & derivadas) | (mapeadas & ausentes) | (derivadas & ausentes)
+    )
+    if duplicadas:
+        raise ContratoInvalido(
+            f"{caminho.name} declara a(s) coluna(s) {sorted(duplicadas)} em mais de "
+            "um dos conjuntos mapeamento/derivadas/ausentes. Uma coluna so pode "
+            "aparecer em um deles."
+        )
+
+    cobertas = mapeadas | derivadas | ausentes
 
     faltando = esperadas - cobertas
     if faltando:
@@ -82,6 +100,14 @@ def carregar_contrato(
     if sobrando:
         raise ContratoInvalido(
             f"{caminho.name} declara colunas fora do schema canonico: {sorted(sobrando)}"
+        )
+
+    sem_justificativa = [
+        coluna for coluna, texto in contrato.ausentes.items() if not texto.strip()
+    ]
+    if sem_justificativa:
+        raise ContratoInvalido(
+            f"{caminho.name} declara ausente sem justificativa: {sorted(sem_justificativa)}"
         )
 
     return contrato
