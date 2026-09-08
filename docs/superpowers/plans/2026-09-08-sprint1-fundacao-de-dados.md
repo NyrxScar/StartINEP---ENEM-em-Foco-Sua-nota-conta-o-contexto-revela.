@@ -26,6 +26,75 @@
 
 ---
 
+## ⚠️ EMENDA (08/09/2026) — Descoberta que altera as Tasks 4, 5, 7 e 10
+
+A Task 5 executou a descoberta e encontrou o seguinte, verificado nos arquivos reais:
+
+| Edição | Estrutura real | Notas | Socioeconômico | Vínculo |
+|---|---|---|---|---|
+| 2023 | `DADOS/MICRODADOS_ENEM_2023.csv` (arquivo único) | ✅ | ✅ | ✅ mesma linha |
+| 2024 | `DADOS/PARTICIPANTES_2024.csv` + `DADOS/RESULTADOS_2024.csv` | ✅ só em RESULTADOS | ✅ só em PARTICIPANTES | ❌ **rompido** |
+| 2025 | `DADOS/PARTICIPANTES_2025.csv` apenas | ❌ nenhuma | ✅ | — |
+
+Os dois arquivos de 2024 têm 4.332.944 linhas cada, mas chaves diferentes
+(`NU_INSCRICAO` ordenada × `NU_SEQUENCIAL` embaralhada) e ordens diferentes — a
+linha 1 de um é do RS e a do outro é do CE. **É des-identificação deliberada do
+INEP**, a medida do RIPD que o próprio Plano de Trabalho cita na referência [4],
+não um defeito nem uma chave faltando.
+
+Volumetria real do ZIP: 2023 = 524,1 MB · 2024 = 501,7 MB · 2025 = 518,4 MB.
+
+### Decisões que emendam o plano
+
+**E1 — Escopo passa a três edições.** 2023 é a base principal (única que sustenta o
+produto completo), 2024 entra pelos recortes que sobreviveram junto da nota, 2025
+entra como perfil de inscritos sem nota.
+
+**E2 — Um arquivo por edição.**
+- 2023 → `DADOS/MICRODADOS_ENEM_2023.csv`
+- 2024 → `DADOS/RESULTADOS_2024.csv` **apenas**. `PARTICIPANTES_2024` não é ingerido:
+  não é juntável às notas, e ingerir ambos criaria duas populações disjuntas no mesmo
+  ano sem forma de relacioná-las.
+- 2025 → `DADOS/PARTICIPANTES_2025.csv`
+
+**E3 — Contratos passam a declarar ausências.** O schema canônico continua o mesmo, mas
+`ContratoEdicao` ganha o campo `ausentes: dict[str, str]` (coluna canônica →
+justificativa). A validação de `carregar_contrato` passa a exigir que **cada** coluna
+canônica esteja em `mapeamento`, em `derivadas` **ou** em `ausentes`. Ausência tem que
+ser declarada e justificada; nunca silenciosa. Colunas ausentes são escritas como NULL
+na camada Prata.
+
+Rejeitada a alternativa de "grupos de capacidade" (socioeconomico/escola/notas): a
+granularidade não fecha, porque `tipo_escola` existe só em 2023 enquanto
+`dependencia_adm_escola` existe em 2023 e 2024, e ambas cairiam no mesmo grupo.
+
+**E4 — As justificativas de `ausentes` são entrega documental**, não comentário: são a
+evidência da deriva de schema que o AV3 exige, e a matéria-prima do ADR-0004.
+
+**E5 — Correção de TLS (já implementada, commit `efbc4bf`).** `download.inep.gov.br`
+envia só o certificado folha, sem a intermediária; curl e httpx/certifi falham com
+`CERTIFICATE_VERIFY_FAILED`. A intermediária (`RNP ICPEdu GR46 OV TLS CA 2025`, emitida
+por GlobalSign Root R46, válida até 19/11/2030) é embarcada em
+`src/radar_etl/extract/certs/inep_chain.pem` e somada ao `certifi` num `SSLContext`.
+**Nunca `verify=False`** — a integridade da origem é o ponto desta sprint inteira.
+
+### Efeito em cada task
+
+- **Task 4** — `ContratoEdicao` ganha `ausentes`; a validação passa a considerar os três
+  conjuntos. Testes acrescidos: contrato com ausente declarado é válido; coluna não
+  declarada em lugar nenhum continua inválida.
+- **Task 5** — escreve **três** contratos (2023, 2024, 2025) a partir dos cabeçalhos
+  reais, cada um com suas `ausentes` justificadas.
+- **Task 7** — `montar_select` emite `NULL::<tipo> AS <coluna>` para toda coluna em
+  `ausentes`. Fixtures de teste derivam do contrato real, não do gabarito.
+- **Task 10** — fixtures derivam do contrato real. O portão de volume compara com a
+  edição anterior **que tenha a mesma capacidade**, não com o ano imediatamente
+  anterior: comparar as 4,3 M linhas de 2024-RESULTADOS com 2023 é legítimo, mas
+  comparar 2025-PARTICIPANTES com 2024-RESULTADOS mede coisas diferentes.
+- **Task 11** — ingere três edições; a volumetria reporta as três.
+
+---
+
 ## Estrutura de Arquivos
 
 | Arquivo | Responsabilidade |
