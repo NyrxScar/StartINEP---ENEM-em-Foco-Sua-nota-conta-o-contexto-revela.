@@ -1,0 +1,74 @@
+# Schema canonico unico do Radar ENEM.
+# Toda edicao do ENEM e traduzida para ESTE vocabulario por um contrato proprio.
+# Alterar este arquivo obriga a revisar todos os contratos de edicao.
+versao: 1
+particoes: [ano, uf_prova]
+
+colunas:
+  ano:
+    tipo: SMALLINT
+    descricao: "Ano da edicao do ENEM. Coluna de particao."
+  uf_prova:
+    tipo: VARCHAR
+    descricao: "Sigla da UF onde o participante realizou a prova. Coluna de particao."
+  regiao:
+    tipo: VARCHAR
+    descricao: "Macrorregiao (Norte, Nordeste, Centro-Oeste, Sudeste, Sul) derivada de uf_prova."
+
+  faixa_etaria:
+    tipo: TINYINT
+    descricao: "Codigo da faixa etaria do participante, conforme dicionario do INEP."
+  sexo:
+    tipo: VARCHAR
+    descricao: "Sexo declarado (M/F)."
+  cor_raca:
+    tipo: TINYINT
+    descricao: "Codigo de cor/raca autodeclarada, conforme dicionario do INEP."
+  tipo_escola:
+    tipo: TINYINT
+    descricao: "Tipo de escola do ensino medio (publica, privada, exterior, nao respondeu)."
+  dependencia_adm_escola:
+    tipo: TINYINT
+    descricao: "Dependencia administrativa da escola (federal, estadual, municipal, privada)."
+  treineiro:
+    tipo: BOOLEAN
+    descricao: "Participante fez a prova como treineiro."
+
+  renda_familiar:
+    tipo: VARCHAR
+    descricao: "Faixa de renda familiar mensal declarada no questionario socioeconomico (Q006)."
+  escolaridade_pai:
+    tipo: VARCHAR
+    descricao: "Escolaridade do pai declarada no questionario socioeconomico."
+  escolaridade_mae:
+    tipo: VARCHAR
+    descricao: "Escolaridade da mae declarada no questionario socioeconomico."
+
+  presenca_cn:
+    tipo: TINYINT
+    descricao: "Situacao de presenca em Ciencias da Natureza (0 faltou, 1 presente, 2 eliminado)."
+  presenca_ch:
+    tipo: TINYINT
+    descricao: "Situacao de presenca em Ciencias Humanas."
+  presenca_lc:
+    tipo: TINYINT
+    descricao: "Situacao de presenca em Linguagens e Codigos."
+  presenca_mt:
+    tipo: TINYINT
+    descricao: "Situacao de presenca em Matematica."
+
+  nota_cn:
+    tipo: FLOAT
+    descricao: "Nota de Ciencias da Natureza (0-1000). Nula para ausentes e eliminados."
+  nota_ch:
+    tipo: FLOAT
+    descricao: "Nota de Ciencias Humanas (0-1000). Nula para ausentes e eliminados."
+  nota_lc:
+    tipo: FLOAT
+    descricao: "Nota de Linguagens e Codigos (0-1000). Nula para ausentes e eliminados."
+  nota_mt:
+    tipo: FLOAT
+    descricao: "Nota de Matematica (0-1000). Nula para ausentes e eliminados."
+  nota_redacao:
+    tipo: FLOAT
+    descricao: "Nota da redacao (0-1000). Nula para ausentes e eliminados."
