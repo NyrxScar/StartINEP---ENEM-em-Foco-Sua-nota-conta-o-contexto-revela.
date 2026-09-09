@@ -82,3 +82,15 @@ def test_valor_de_recorte_e_parametrizado_nao_interpolado(prata):
 def test_whitelists_expostas_para_a_api():
     assert "mt" in AREAS and "redacao" in AREAS
     assert "regiao" in RECORTES and "renda_familiar" in RECORTES
+
+
+def test_histograma_acompanha_o_recorte(prata):
+    r = Repositorio(prata).consultar(edicao=2023, area="mt", nota=200.0, recorte={})
+
+    assert sum(n for _, n in r.histograma) == r.n_total
+    assert r.histograma == [(100.0, 1), (200.0, 2), (300.0, 1)]
+
+
+def test_histograma_vazio_quando_nao_ha_populacao(prata):
+    r = Repositorio(prata).consultar(edicao=2025, area="mt", nota=500.0, recorte={})
+    assert r.histograma == []

@@ -1,0 +1,268 @@
+:root {
+  --papel: #fafaf7;
+  --tinta: #101a2c;
+  --multidao: #c3cbd9;
+  --multidao-fraca: #dde1e9;
+  --marca: #d6246e;
+  --recuo: #6b7688;
+  --linha: #e2e4e9;
+
+  --passo: clamp(1rem, 0.6rem + 1.6vw, 1.6rem);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--fonte-archivo), system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
+}
+
+main {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: calc(var(--passo) * 2) var(--passo) calc(var(--passo) * 4);
+}
+
+.marca-produto {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--recuo);
+  margin: 0 0 calc(var(--passo) * 2);
+}
+
+h1 {
+  font-size: clamp(2.1rem, 1.2rem + 4vw, 3.4rem);
+  font-stretch: 125%;
+  font-weight: 700;
+  line-height: 1.02;
+  letter-spacing: -0.022em;
+  margin: 0 0 0.6rem;
+  text-wrap: balance;
+}
+
+.subtitulo {
+  max-width: 34rem;
+  color: var(--recuo);
+  margin: 0 0 calc(var(--passo) * 2.2);
+}
+
+/* ---------- formulário ---------- */
+
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0 0 calc(var(--passo) * 1.6);
+}
+
+legend {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--recuo);
+  padding: 0;
+  margin-bottom: 0.7rem;
+}
+
+.notas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 0.6rem;
+}
+
+label {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--recuo);
+  margin-bottom: 0.25rem;
+}
+
+input,
+select {
+  width: 100%;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta);
+  background: #fff;
+  border: 1.5px solid var(--linha);
+  border-radius: 2px;
+  padding: 0.55rem 0.6rem;
+}
+
+input {
+  font-stretch: 112%;
+  font-weight: 600;
+  font-size: 1.15rem;
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: 2.5px solid var(--marca);
+  outline-offset: 2px;
+}
+
+.recortes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.6rem;
+}
+
+button {
+  font: inherit;
+  font-weight: 600;
+  color: var(--papel);
+  background: var(--tinta);
+  border: 0;
+  border-radius: 2px;
+  padding: 0.7rem 1.4rem;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--marca);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: progress;
+}
+
+/* ---------- resultado ---------- */
+
+.resultado {
+  border-top: 1.5px solid var(--tinta);
+  margin-top: calc(var(--passo) * 2);
+  padding-top: calc(var(--passo) * 1.6);
+}
+
+.resultado + .resultado {
+  border-top-color: var(--linha);
+}
+
+.area {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--recuo);
+  margin: 0 0 0.4rem;
+}
+
+.percentil {
+  font-size: clamp(3.4rem, 2rem + 7vw, 5.6rem);
+  font-stretch: 125%;
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.percentil span {
+  font-size: 0.42em;
+  font-stretch: 100%;
+}
+
+.frase {
+  max-width: 32rem;
+  margin: 0.7rem 0 0;
+  text-wrap: pretty;
+}
+
+.frase b {
+  font-weight: 600;
+}
+
+.grafico {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: calc(var(--passo) * 1.4) 0 0.5rem;
+  overflow: visible;
+}
+
+.barra {
+  fill: var(--multidao-fraca);
+}
+
+.barra.abaixo {
+  fill: var(--multidao);
+}
+
+.marcador {
+  stroke: var(--marca);
+  stroke-width: 2.5;
+  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rotulo-marcador {
+  fill: var(--marca);
+  font-size: 11px;
+  font-weight: 700;
+  font-stretch: 112%;
+  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.eixo {
+  fill: var(--recuo);
+  font-size: 11px;
+}
+
+.medidas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.4rem;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+  color: var(--recuo);
+}
+
+.medidas b {
+  color: var(--tinta);
+  font-weight: 600;
+}
+
+.aviso {
+  border-left: 3px solid var(--marca);
+  padding-left: 0.8rem;
+  margin: 0.9rem 0 0;
+  font-size: 0.92rem;
+  color: var(--recuo);
+  max-width: 32rem;
+}
+
+.erro {
+  border-left: 3px solid var(--marca);
+  padding-left: 0.8rem;
+  margin-top: var(--passo);
+}
+
+footer {
+  margin-top: calc(var(--passo) * 3);
+  padding-top: var(--passo);
+  border-top: 1px solid var(--linha);
+  font-size: 0.85rem;
+  color: var(--recuo);
+  max-width: 34rem;
+}
+
+footer p {
+  margin: 0 0 0.6rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marcador,
+  .rotulo-marcador {
+    transition: none;
+  }
+}

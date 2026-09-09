@@ -6,7 +6,7 @@ saem juntos, sobre o mesmo recorte, numa varredura so.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import duckdb
@@ -34,6 +34,11 @@ RECORTES: frozenset[str] = frozenset({
 })
 
 
+# Faixas de 20 pontos na escala 0-1000: 50 barras, resolucao suficiente para a curva
+# sem transformar o payload em um dump.
+LARGURA_BIN = 20
+
+
 class RecorteInvalido(ValueError):
     """Area ou dimensao de recorte fora da whitelist."""
 
@@ -50,6 +55,7 @@ class Populacao:
     q3: float | None
     minimo: float | None
     maximo: float | None
+    histograma: list[tuple[float, int]] = field(default_factory=list)
 
 
 class Repositorio:
@@ -95,5 +101,16 @@ class Repositorio:
             WHERE {" AND ".join(condicoes)}
         """
         argumentos = [*parametros[:2], self._padrao, *parametros[2:]]
-        linha = duckdb.connect().execute(sql, argumentos).fetchone()
-        return Populacao(*linha)
+        con = duckdb.connect()
+        linha = con.execute(sql, argumentos).fetchone()
+
+        # Histograma na mesma varredura logica: a interface precisa da curva para
+        # mostrar ONDE a pessoa esta, nao so em que percentil.
+        sql_bins = f"""
+            SELECT floor({coluna} / {LARGURA_BIN}) * {LARGURA_BIN} AS faixa, count(*) AS n
+            FROM read_parquet(?, hive_partitioning = true)
+            WHERE {" AND ".join(condicoes)}
+            GROUP BY faixa ORDER BY faixa
+        """
+        bins = con.execute(sql_bins, [self._padrao, *parametros[2:]]).fetchall()
+        return Populacao(*linha, histograma=[(float(f), int(n)) for f, n in bins])

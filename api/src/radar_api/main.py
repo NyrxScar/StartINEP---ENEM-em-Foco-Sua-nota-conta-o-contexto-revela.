@@ -56,6 +56,7 @@ class ResultadoArea(BaseModel):
     q3: float | None = None
     minimo: float | None = None
     maximo: float | None = None
+    histograma: list[tuple[float, int]] = []
     aviso: str | None = None
 
 
@@ -97,6 +98,7 @@ def _avaliar(nota: float, p: Populacao) -> ResultadoArea:
         q3=p.q3,
         minimo=p.minimo,
         maximo=p.maximo,
+        histograma=p.histograma,
         aviso=aviso,
     )
 
