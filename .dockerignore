@@ -1,0 +1,10 @@
+data/bronze/
+data/_manifests/
+pipeline/
+docs/
+Obsidian_Docs/
+.git/
+.superpowers/
+**/.venv/
+**/__pycache__/
+**/tests/
