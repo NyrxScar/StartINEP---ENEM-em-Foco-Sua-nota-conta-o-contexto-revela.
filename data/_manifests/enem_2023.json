@@ -1,0 +1,14 @@
+{
+  "edicao": 2023,
+  "fonte_url": "https://download.inep.gov.br/microdados/microdados_enem_2023.zip",
+  "fonte_sha256": "19512b7e29c9c8e940554396969722081341caa275c245a6c9d2d559c5d13a0a",
+  "fonte_bytes": 549511687,
+  "fonte_last_modified": null,
+  "baixado_em": "2026-09-09T02:25:04.440726+00:00",
+  "csv_bytes": 1777162429,
+  "linhas_bronze": 3933955,
+  "linhas_prata": 3933955,
+  "bytes_prata": 31201668,
+  "versao_contrato": 1,
+  "processado_em": "2026-09-09T02:25:04.440741+00:00"
+}

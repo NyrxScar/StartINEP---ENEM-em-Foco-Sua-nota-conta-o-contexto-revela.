@@ -1,0 +1,14 @@
+{
+  "edicao": 2025,
+  "fonte_url": "https://download.inep.gov.br/microdados/microdados_enem_2025.zip",
+  "fonte_sha256": "40f1949dde35c3d2db0bd39b31c750ad4dad81a9dfc69810ee1b3a1d85164a96",
+  "fonte_bytes": 543587024,
+  "fonte_last_modified": "Tue, 01 Sep 2026 17:50:27 GMT",
+  "baixado_em": "2026-09-09T02:28:29.043927+00:00",
+  "csv_bytes": 513113794,
+  "linhas_bronze": 4810772,
+  "linhas_prata": 4810772,
+  "bytes_prata": 866404,
+  "versao_contrato": 1,
+  "processado_em": "2026-09-09T02:28:29.043943+00:00"
+}
