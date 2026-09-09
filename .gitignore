@@ -227,3 +227,6 @@ data/gold/
 # Manifestos SAO versionados: sao a linhagem auditavel
 !data/_manifests/
 !data/_manifests/**
+
+
+.claude/
