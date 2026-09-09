@@ -38,3 +38,8 @@ target-version = "py312"
 # Conjunto fixado deliberadamente: um default nao fixado faz um upgrade do ruff
 # quebrar o lint em codigo intocado.
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.flake8-bugbear]
+# typer.Option(Path(...)) e o idioma do Typer para default de caminho; B008 aqui
+# e falso positivo.
+extend-immutable-calls = ["pathlib.Path"]

@@ -7,9 +7,33 @@ app = typer.Typer(help="Pipeline de ingestao dos microdados do ENEM.", no_args_i
 
 
 @app.command()
-def ingest(edicao: int = typer.Option(..., help="Ano da edicao do ENEM.")) -> None:
-    """Executa a ingestao de uma edicao (implementado na Task 10)."""
-    raise NotImplementedError
+def ingest(
+    edicao: int = typer.Option(..., help="Ano da edicao do ENEM."),
+    raiz: Path = typer.Option(Path("../data"), help="Raiz das camadas de dados."),
+    forcar: bool = typer.Option(False, "--forcar", help="Reprocessa mesmo sem mudanca na fonte."),
+    sem_rede: bool = typer.Option(False, "--sem-rede", help="Pula a verificacao de freshness."),
+) -> None:
+    """Ingere uma edicao do ENEM: Bronze -> portoes de qualidade -> Prata."""
+    from radar_etl.pipeline import Caminhos, EdicaoJaProcessada, executar
+    from radar_etl.quality.portoes import QualidadeReprovada
+
+    try:
+        manifesto = executar(
+            edicao, Caminhos(raiz=raiz), forcar=forcar, verificar_origem=not sem_rede
+        )
+    except EdicaoJaProcessada as aviso:
+        typer.echo(f"[pulado] {aviso}")
+        raise typer.Exit(code=0) from aviso
+    except QualidadeReprovada as erro:
+        typer.echo(f"[REPROVADO] {erro}", err=True)
+        raise typer.Exit(code=1) from erro
+
+    reducao = (1 - manifesto.bytes_prata / manifesto.fonte_bytes) * 100
+    typer.echo(
+        f"[ok] Edicao {manifesto.edicao}: {manifesto.linhas_prata:,} linhas na Prata | "
+        f"{manifesto.fonte_bytes / 1_048_576:.1f} MB -> "
+        f"{manifesto.bytes_prata / 1_048_576:.1f} MB ({reducao:.1f}% de reducao)"
+    )
 
 
 @app.command()
