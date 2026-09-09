@@ -51,15 +51,18 @@ def _contexto(cliente: httpx.Client | None):
 
 
 def consultar_metadados(url: str, cliente: httpx.Client | None = None) -> MetadadosRemotos:
+    # GET de 1 byte em vez de HEAD: o servidor do INEP derruba a conexao em HEAD.
+    # O Range faz o corpo nao ser transferido, entao o custo e o mesmo.
     with _contexto(cliente) as c:
-        resposta = c.head(url)
-        resposta.raise_for_status()
-        tamanho = resposta.headers.get("content-length")
-        return MetadadosRemotos(
-            bytes_totais=int(tamanho) if tamanho is not None else None,
-            last_modified=resposta.headers.get("last-modified"),
-            etag=resposta.headers.get("etag"),
-        )
+        with c.stream("GET", url, headers={"Range": "bytes=0-0"}) as resposta:
+            resposta.raise_for_status()
+            faixa = resposta.headers.get("content-range")
+            tamanho = faixa.rsplit("/", 1)[-1] if faixa else resposta.headers.get("content-length")
+            return MetadadosRemotos(
+                bytes_totais=int(tamanho) if tamanho and tamanho.isdigit() else None,
+                last_modified=resposta.headers.get("last-modified"),
+                etag=resposta.headers.get("etag"),
+            )
 
 
 def baixar(url: str, destino: Path, cliente: httpx.Client | None = None) -> Path:

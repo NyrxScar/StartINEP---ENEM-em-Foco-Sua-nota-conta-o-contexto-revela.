@@ -27,6 +27,7 @@ def escrever_prata(
     select_sql: str,
     destino: Path,
     canonico: SchemaCanonico,
+    edicao: int,
 ) -> int:
     """Escreve a camada Prata em Parquet+Snappy, particionada e reproduzivel.
 
@@ -34,8 +35,12 @@ def escrever_prata(
     ORDER BY ALL fazem duas execucoes sobre a mesma fonte produzirem bytes identicos.
     E assim que a idempotencia do pipeline vira algo verificavel em vez de alegado.
     """
-    if destino.exists():
-        shutil.rmtree(destino)
+    # Apaga so a particao DESTA edicao. Limpar a raiz inteira apagaria as edicoes ja
+    # ingeridas; reescrever por cima sem limpar deixaria orfa uma particao que sumiu
+    # da origem (uma UF que deixou de aparecer).
+    particao_edicao = destino / f"{canonico.particoes[0]}={edicao}"
+    if particao_edicao.exists():
+        shutil.rmtree(particao_edicao)
     destino.mkdir(parents=True, exist_ok=True)
 
     con.execute("SET threads TO 1")
@@ -50,8 +55,9 @@ def escrever_prata(
          OVERWRITE_OR_IGNORE, FILENAME_PATTERN 'dados_{{i}}')
     """)
 
+    caminho_edicao = str(particao_edicao).replace("'", "''")
     return con.execute(
-        f"SELECT count(*) FROM read_parquet('{caminho}/**/*.parquet', hive_partitioning=true)"
+        f"SELECT count(*) FROM read_parquet('{caminho_edicao}/**/*.parquet')"
     ).fetchone()[0]
 
 

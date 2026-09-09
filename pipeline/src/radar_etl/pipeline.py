@@ -98,9 +98,12 @@ def executar(
     ])
 
     linhas_prata = escrever_prata(
-        con, montar_select(contrato, canonico, csv_path), caminhos.silver, canonico
+        con, montar_select(contrato, canonico, csv_path), caminhos.silver, canonico, edicao
     )
-    volumetria = medir(zip_path.stat().st_size, caminhos.silver, linhas_prata)
+    # Mede so a particao desta edicao: somar a Prata inteira reportaria a volumetria
+    # acumulada de todas as edicoes ja ingeridas.
+    particao = caminhos.silver / f"{canonico.particoes[0]}={edicao}"
+    volumetria = medir(zip_path.stat().st_size, particao, linhas_prata)
 
     manifesto = Manifesto(
         edicao=edicao,

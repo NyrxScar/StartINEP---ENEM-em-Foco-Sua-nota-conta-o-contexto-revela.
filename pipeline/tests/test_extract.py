@@ -13,11 +13,14 @@ def _cliente_falso(handler) -> httpx.Client:
 
 def test_consultar_metadados_le_cabecalhos_sem_baixar_corpo():
     def handler(request: httpx.Request) -> httpx.Response:
-        assert request.method == "HEAD"
+        # O servidor do INEP derruba HEAD; usamos GET com Range de 1 byte.
+        assert request.method == "GET"
+        assert request.headers["Range"] == "bytes=0-0"
         return httpx.Response(
-            200,
+            206,
+            content=b"x",
             headers={
-                "content-length": "734003200",
+                "content-range": "bytes 0-0/734003200",
                 "last-modified": "Mon, 01 Sep 2026 12:00:00 GMT",
                 "etag": '"abc-123"',
             },
