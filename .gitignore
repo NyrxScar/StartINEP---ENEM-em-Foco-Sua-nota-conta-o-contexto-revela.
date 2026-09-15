@@ -3,6 +3,16 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+apresentações_hugo/
+BIG_DATA/
+Computação_em_Nuvem/
+Plano.pdf
+.kiro/
+
+# Dados do pipeline (camadas bronze/silver): grandes, regeneraveis via
+# pipeline/radar_etl, nunca versionados. Ver docs/implantacao.md.
+data/
+
 # C extensions
 *.so
 
@@ -216,3 +226,18 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---------------------------------------------------------------------------
+# Node / Next.js (frontend em web/)
+# ---------------------------------------------------------------------------
+node_modules/
+.next/
+out/
+.vercel
+*.tsbuildinfo
+.env.local
+.env.*.local
+
+# O padrao `lib/` acima (empacotamento Python) tambem capturaria `web/lib/`,
+# onde vive o cliente de API tipado do frontend. Reintroduz esse diretorio.
+!web/lib/
