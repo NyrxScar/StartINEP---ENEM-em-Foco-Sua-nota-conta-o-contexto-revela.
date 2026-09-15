@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "radar-api"
+version = "0.1.0"
+description = "API estatistica do Radar ENEM (camada de analise sobre a camada silver)"
+requires-python = ">=3.12"
+dependencies = [
+    "duckdb>=1.1",
+    "fastapi>=0.115",
+    "pydantic>=2.8",
+    "pydantic-settings>=2.4",
+    "uvicorn[standard]>=0.30",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.6",
+    "pytest>=8.0",
+    "hypothesis>=6.100",
+    # Requerido por fastapi.testclient.TestClient (testes de nivel de API).
+    "httpx>=0.27",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/radar_api"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+markers = [
+    # Smoke de desempenho (Req 6.3, task 13.4): mede latencia contra a silver
+    # real e verifica o partition pruning. Selecione com `-m desempenho` ou
+    # exclua com `-m 'not desempenho'`; e pulado quando data/silver esta ausente.
+    "desempenho: smoke test de desempenho sobre a silver real (Req 6.2/6.3)",
+]

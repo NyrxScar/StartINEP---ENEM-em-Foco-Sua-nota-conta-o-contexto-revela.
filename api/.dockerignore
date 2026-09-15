@@ -1,0 +1,49 @@
+# Contexto de build da imagem da API (`docker build api/`).
+# Mantem o contexto minimo: apenas `pyproject.toml` + `src/` sao necessarios
+# para construir o wheel de `radar_api`.
+
+# Ambientes virtuais locais (grandes e especificos da maquina do dev).
+.venv/
+venv/
+env/
+
+# Bytecode e caches de ferramentas.
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.mypy_cache/
+
+# Testes: NAO entram na imagem. O wheel empacota somente `src/radar_api`
+# (hatchling) e a imagem de producao nao instala o extra `dev`, logo pytest/
+# hypothesis/httpx nem existem no runtime.
+tests/
+
+# Artefatos de empacotamento.
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Segredos / configuracao local — configuracao e feita por env vars no runtime.
+.env
+.env.*
+*.pem
+*.key
+
+# Dados: a camada silver e montada em runtime, nunca embutida (Req 7.3).
+data/
+*.parquet
+*.csv
+*.zip
+*.duckdb
+
+# Metadados do proprio build e do repositorio.
+Dockerfile
+.dockerignore
+.git/
+.gitignore
+*.md
