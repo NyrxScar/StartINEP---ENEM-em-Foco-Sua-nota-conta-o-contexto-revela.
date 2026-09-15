@@ -1,0 +1,38 @@
+{
+  "name": "radar-enem-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Frontend do Radar ENEM: informe sua nota e veja sua posicao na distribuicao dentro de um recorte comparavel.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "next": "15.1.3",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "10.4.0",
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.3.0",
+    "@testing-library/user-event": "14.6.1",
+    "@types/node": "22.20.2",
+    "@types/react": "19.0.2",
+    "@types/react-dom": "19.0.2",
+    "eslint": "9.17.0",
+    "eslint-config-next": "15.1.3",
+    "jsdom": "26.1.0",
+    "typescript": "5.7.2",
+    "vite": "7.3.6",
+    "vitest": "5.0.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,356 @@
+/* Estilos minimos e acessiveis por padrao: contraste alto, foco visivel,
+   layout fluido a partir de 320px. Nenhum framework de CSS envolvido. */
+
+:root {
+  --cor-fundo: #ffffff;
+  --cor-texto: #1a1a1a;
+  --cor-borda: #767676;
+  --cor-acento: #14476b; /* contraste >= 7:1 sobre branco */
+  --cor-erro: #a3121a; /* contraste >= 7:1 sobre branco */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+}
+
+body > header,
+body > main,
+body > footer {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.marca {
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: var(--cor-acento);
+  margin: 0;
+}
+
+.pular-para-conteudo {
+  position: absolute;
+  left: -9999px;
+}
+
+.pular-para-conteudo:focus {
+  position: static;
+  display: inline-block;
+  padding: 0.5rem;
+  background: var(--cor-acento);
+  color: #ffffff;
+}
+
+:focus-visible {
+  outline: 3px solid var(--cor-acento);
+  outline-offset: 2px;
+}
+
+footer {
+  border-top: 1px solid var(--cor-borda);
+  font-size: 0.875rem;
+}
+
+/* --- Formulario de analise (12.2) ------------------------------------------
+   Layout de coluna unica, utilizavel a partir de 320px; alvos de toque >= 44px;
+   mensagens de erro em cor de contraste alto sobre branco (>= 7:1) e nunca
+   dependendo apenas da cor (todas trazem texto). */
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 32rem;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.campo label {
+  font-weight: 600;
+}
+
+.campo input,
+.campo select {
+  min-height: 2.75rem;
+  padding: 0.5rem;
+  font: inherit;
+  color: var(--cor-texto);
+  background: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
+  border-radius: 0.25rem;
+}
+
+.campo input[aria-invalid='true'] {
+  border-color: var(--cor-erro);
+  border-width: 2px;
+}
+
+.recorte {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: 0.25rem;
+  padding: 1rem;
+  margin: 0;
+}
+
+.recorte legend {
+  font-weight: 700;
+  padding: 0 0.25rem;
+}
+
+.ajuda {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.erro {
+  margin: 0;
+  font-weight: 600;
+  color: var(--cor-erro);
+}
+
+.aviso {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-left: 4px solid var(--cor-acento);
+  background: #eef4f8;
+}
+
+.acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.acoes button {
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--cor-acento);
+  border: 1px solid var(--cor-acento);
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.acoes button[type='button'] {
+  color: var(--cor-acento);
+  background: var(--cor-fundo);
+}
+
+.acoes button:disabled {
+  color: #ffffff;
+  background: #5a5a5a;
+  border-color: #5a5a5a;
+  cursor: not-allowed;
+}
+
+/* --- Visualizacao de resultado (12.3) --------------------------------------
+   O grafico e SVG inline (nenhuma biblioteca de charting). Ele e apenas o
+   reforco visual: prosa e tabelas ao lado carregam a mesma informacao, e nada
+   aqui usa `display: none` para esconder conteudo de tecnologia assistiva.
+   Cores: barras em --cor-acento e marcador em --cor-erro, ambos >= 7:1 sobre
+   branco; o marcador tambem traz rotulo textual, nunca so cor. */
+
+.visualizacao {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 40rem;
+}
+
+.destaque {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.visualizacao p {
+  margin: 0;
+}
+
+.grafico {
+  width: 100%;
+  height: auto;
+  max-height: 16rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: 0.25rem;
+  background: var(--cor-fundo);
+}
+
+.grafico-barra {
+  fill: var(--cor-acento);
+}
+
+.grafico-barra--posicao {
+  fill: var(--cor-erro);
+}
+
+.grafico-eixo {
+  stroke: var(--cor-texto);
+  stroke-width: 1;
+}
+
+.grafico-marcador {
+  stroke: var(--cor-erro);
+  stroke-width: 3;
+  stroke-dasharray: 6 4;
+}
+
+.grafico-rotulo {
+  fill: var(--cor-texto);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.grafico-rotulo--marcador {
+  fill: var(--cor-erro);
+  font-weight: 700;
+}
+
+.tabela-dados {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.tabela-dados caption {
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: 0.5rem;
+}
+
+.tabela-dados th,
+.tabela-dados td {
+  border: 1px solid var(--cor-borda);
+  padding: 0.375rem 0.5rem;
+  text-align: left;
+}
+
+.tabela-dados thead th {
+  background: #eef4f8;
+}
+
+.tabela-dados td {
+  font-variant-numeric: tabular-nums;
+}
+
+.detalhes-dados {
+  border: 1px solid var(--cor-borda);
+  border-radius: 0.25rem;
+  padding: 0.75rem;
+}
+
+.detalhes-dados summary {
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+}
+
+/* --- Estados de UI e linhagem (12.4) ---------------------------------------
+   Nenhum estado depende de cor para significar: o bloco de erro tem titulo e
+   texto proprios, e o indicador de carregamento traz a frase junto do circulo
+   pulsante (que e decorativo e para de animar sob `prefers-reduced-motion`).
+   Cores herdam os tokens de contraste >= 7:1 sobre branco. */
+
+.estado-carregando {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 1.5rem;
+  margin: 1rem 0 0;
+  font-weight: 600;
+}
+
+.pulsante {
+  flex: none;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--cor-acento);
+  animation: pulsar 1.1s ease-in-out infinite;
+}
+
+@keyframes pulsar {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulsante {
+    animation: none;
+  }
+}
+
+.estado-erro {
+  max-width: 40rem;
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--cor-erro);
+  background: #fdf2f2;
+}
+
+.estado-erro h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  color: var(--cor-erro);
+}
+
+.estado-erro p {
+  margin: 0 0 0.5rem;
+}
+
+.estado-erro p:last-child {
+  margin-bottom: 0;
+}
+
+.linhagem {
+  max-width: 40rem;
+  margin: 1.5rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--cor-borda);
+  font-size: 0.875rem;
+}
+
+.linhagem h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.linhagem-lista {
+  margin: 0 0 0.5rem;
+  padding-left: 1.25rem;
+}
+
+.linhagem-lista li + li {
+  margin-top: 0.375rem;
+}
+
+.linhagem code {
+  font-size: 0.8125rem;
+  word-break: break-all;
+}

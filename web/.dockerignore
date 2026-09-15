@@ -1,0 +1,43 @@
+# Contexto de build da imagem do frontend (web/Dockerfile).
+# Objetivo duplo: manter o contexto pequeno e impedir que segredos locais
+# entrem na imagem.
+
+# Dependencias e artefatos de build: reinstalados/regerados dentro da imagem.
+node_modules
+.next
+out
+build
+dist
+*.tsbuildinfo
+
+# Controle de versao e metadados de ferramentas.
+.git
+.gitignore
+.github
+.kiro
+.superpowers
+.vscode
+.idea
+
+# Segredos e configuracao local (o .env.example, versionado e sem segredo,
+# continua no contexto de proposito, como documentacao).
+.env
+.env.local
+.env.*.local
+
+# Logs e caches.
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm
+.eslintcache
+coverage
+.DS_Store
+
+# Artefatos do proprio Docker (nao sao insumo de build).
+Dockerfile
+.dockerignore
+
+# Documentacao: nao afeta o bundle.
+*.md
