@@ -342,8 +342,8 @@ def criar_app(config: Config | None = None) -> FastAPI:
     app.add_exception_handler(ErroRadar, _tratar_erro_radar)
     app.add_exception_handler(RequestValidationError, _tratar_erro_validacao)
 
-    # CORS: em desenvolvimento o frontend (Next.js) roda em outra origem
-    # (localhost:3000) e o navegador exige cabecalhos Access-Control-*. As
+    # CORS: em desenvolvimento o frontend (Vite) roda em outra origem
+    # (localhost:5173) e o navegador exige cabecalhos Access-Control-*. As
     # origens vem de RADAR_CORS_ORIGENS; lista vazia desliga o middleware
     # (caso de producao com mesma origem por roteamento de caminho).
     origens = config_efetiva.cors_origens_lista

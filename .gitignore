@@ -228,13 +228,14 @@ __marimo__/
 .streamlit/secrets.toml
 
 # ---------------------------------------------------------------------------
-# Node / Next.js (frontend em web/)
+# Node / Vite (frontend em web/)
 # ---------------------------------------------------------------------------
 node_modules/
-.next/
 out/
 .vercel
 *.tsbuildinfo
+# `web/dist/` (saida do `vite build`) ja e capturado pelo padrao `dist/` da
+# secao de empacotamento Python, mais acima.
 .env.local
 .env.*.local
 

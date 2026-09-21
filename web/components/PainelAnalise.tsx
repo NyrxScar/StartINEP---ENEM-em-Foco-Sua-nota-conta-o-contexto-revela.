@@ -1,12 +1,10 @@
-'use client';
-
 /**
  * `PainelAnalise` — Client Component que detem o estado compartilhado da
  * analise e conecta o formulario (12.2), a visualizacao (12.3) e os estados de
  * UI/linhagem (12.4).
  *
- * Existe para que `app/page.tsx` permaneca um Server Component sem estado: o
- * painel e o unico dono de `resultado`, `erro` e `carregando`.
+ * Existe para que a pagina permaneca sem estado: o painel e o unico dono de
+ * `resultado`, `erro` e `carregando`.
  *
  * Decisoes de projeto da 12.4:
  *
@@ -27,14 +25,20 @@
  * 3. **Linhagem acompanha todo resultado exibido** (Req 5.3), inclusive o
  *    suprimido: saber de qual edicao e de qual carga vem a supressao e parte da
  *    auditabilidade.
+ * 4. **A faixa de indicadores so aparece com resultado.** Mostrar os rotulos com
+ *    tracos antes da primeira consulta encheria a tela de numeros vazios; ate
+ *    la o lugar e ocupado por uma explicacao do que a consulta vai devolver.
  */
 
+import { ChartNoAxesColumn } from 'lucide-react';
 import { useState } from 'react';
 
 import EstadoErro from '@/components/EstadoErro';
 import FormularioAnalise from '@/components/FormularioAnalise';
+import IndicadoresChave from '@/components/IndicadoresChave';
 import Linhagem from '@/components/Linhagem';
 import VisualizacaoResultado from '@/components/VisualizacaoResultado';
+import { Esqueleto, LinhaCarregando } from '@/components/ui/Carregando';
 import type { ErroApi } from '@/lib/api';
 import type { ResultadoAnalise } from '@/lib/tipos';
 
@@ -81,7 +85,7 @@ export default function PainelAnalise() {
     estado.tipo === 'resultado' || estado.tipo === 'amostra-insuficiente';
 
   return (
-    <div data-estado={estado.tipo}>
+    <div data-estado={estado.tipo} className="space-y-6">
       <FormularioAnalise
         onResultado={(novo) => {
           setErro(null);
@@ -97,30 +101,54 @@ export default function PainelAnalise() {
         }}
       />
 
-      {/* Indicador de carregamento (Req 4.5). A regiao vive sempre no DOM para
-          que o leitor de tela anuncie a mudanca de texto; o circulo pulsante e
-          decorativo (`aria-hidden`) e a animacao respeita
-          `prefers-reduced-motion` no CSS. */}
-      <p className="estado-carregando" role="status" aria-live="polite">
-        {estado.tipo === 'carregando' && (
-          <>
-            <span className="pulsante" aria-hidden="true" />
-            Consultando a distribuicao...
-          </>
+      {/* A regiao vive sempre no DOM para que o leitor de tela anuncie a
+          mudanca de texto; um `aria-live` inserido junto com o conteudo
+          costuma nao ser anunciado. */}
+      {/* `sr-only` quando ocioso, em vez de altura reservada: a regiao continua
+          no DOM sem interrupcao (condicao para o anuncio funcionar), porem sai
+          do fluxo e nao deixa um vao entre o formulario e o resultado. */}
+      <p
+        role="status"
+        aria-live="polite"
+        className={estado.tipo === 'carregando' ? '' : 'sr-only'}
+      >
+        {estado.tipo === 'carregando' ? (
+          <LinhaCarregando>Consultando a distribuicao...</LinhaCarregando>
+        ) : (
+          ''
         )}
       </p>
+
+      {estado.tipo === 'carregando' && (
+        <div aria-hidden="true" className="space-y-6">
+          <Esqueleto className="h-24 w-full" />
+          <Esqueleto className="h-10 w-3/4 max-w-xl" />
+          <Esqueleto className="h-56 w-full" />
+        </div>
+      )}
+
+      {estado.tipo === 'ocioso' && (
+        <div className="rounded-[4px] border border-dashed border-line-forte bg-surface px-6 py-10 text-center">
+          <ChartNoAxesColumn
+            size={22}
+            aria-hidden="true"
+            strokeWidth={1.75}
+            className="mx-auto text-ink-40"
+          />
+          <p className="prosa mx-auto mt-3 text-sm leading-relaxed text-ink-60">
+            Preencha sua nota acima para ver a distribuicao do grupo escolhido, seu
+            percentil dentro dele e os quantis que sustentam o numero.
+          </p>
+        </div>
+      )}
 
       {/* Erro ramificado por `codigo`: recorte indisponivel com as edicoes que o
           suportam, limitacoes da edicao, API inacessivel (Req 4.3). */}
       {estado.tipo === 'erro' && <EstadoErro erro={estado.erro} />}
 
-      {/* Resultado. `VisualizacaoResultado` desenha o grafico e o equivalente
-          textual quando ha distribuicao, e no estado `amostra-insuficiente`
-          renderiza a explicacao da supressao sem percentil, quantis ou
-          contagens — a mensagem fica la de proposito, para que exista uma unica
-          formulacao dela (Req 4.4). */}
       {exibindoResultado && (
         <>
+          <IndicadoresChave resultado={estado.resultado} />
           <VisualizacaoResultado resultado={estado.resultado} />
           <Linhagem linhagem={estado.resultado.linhagem} />
         </>

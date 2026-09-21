@@ -3,7 +3,7 @@
  *
  * Regras de projeto:
  *
- * 1. **URL base por ambiente** — lida de `NEXT_PUBLIC_API_URL`, com default de
+ * 1. **URL base por ambiente** — lida de `VITE_API_URL`, com default de
  *    desenvolvimento `http://localhost:8000`. Nenhuma URL de producao e
  *    embutida no codigo (design, secao Implantacao: configuracao por variaveis
  *    de ambiente).
@@ -19,8 +19,8 @@
  *    {@link CODIGO_RESPOSTA_INVALIDA}, para que o consumidor tenha um unico tipo
  *    de erro a tratar.
  *
- * Este modulo e isomorfico (usa apenas `fetch`/`AbortSignal`): serve tanto a
- * Server Components quanto a Client Components.
+ * Este modulo depende apenas de `fetch`/`AbortSignal` e da substituicao de
+ * `import.meta.env` feita pelo Vite no build — nada de especifico de framework.
  */
 
 import type {
@@ -53,12 +53,16 @@ export const CODIGO_RESPOSTA_INVALIDA = 'RESPOSTA_INVALIDA';
 /**
  * URL base da API, sem barra final.
  *
- * `process.env.NEXT_PUBLIC_API_URL` e substituido no build pelo Next para o
- * bundle do cliente; no servidor e lido do ambiente do processo.
+ * `import.meta.env.VITE_API_URL` e substituido literalmente pelo Vite no build,
+ * portanto a URL de cada ambiente entra na esteira de implantacao e nenhuma
+ * delas fica embutida no codigo.
  */
 export function urlBase(): string {
-  const configurada = process.env.NEXT_PUBLIC_API_URL;
-  const bruta = configurada && configurada.length > 0 ? configurada : URL_API_DEFAULT;
+  const configurada = import.meta.env.VITE_API_URL;
+  const bruta =
+    typeof configurada === 'string' && configurada.length > 0
+      ? configurada
+      : URL_API_DEFAULT;
   return bruta.replace(/\/+$/, '');
 }
 
@@ -131,7 +135,7 @@ function detalhesDe(envelope: EnvelopeErro): Record<string, unknown> {
 /** Opcoes de uma chamada: permite abortar/propagar cache do Next. */
 export interface OpcoesRequisicao {
   signal?: AbortSignal;
-  /** Repassado ao `fetch` do Next (default `no-store`: dados sempre frescos). */
+  /** Repassado ao `fetch` (default `no-store`: dados sempre frescos). */
   cache?: RequestCache;
 }
 

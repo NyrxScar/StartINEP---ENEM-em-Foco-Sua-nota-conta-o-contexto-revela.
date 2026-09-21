@@ -4,10 +4,9 @@
 
 # Dependencias e artefatos de build: reinstalados/regerados dentro da imagem.
 node_modules
-.next
-out
-build
 dist
+build
+out
 *.tsbuildinfo
 
 # Controle de versao e metadados de ferramentas.

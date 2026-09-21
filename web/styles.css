@@ -1,0 +1,142 @@
+/**
+ * Fonte unica dos tokens de design do Radar ENEM (Tailwind v4, bloco `@theme`).
+ *
+ * A paleta de graficos foi validada com o verificador de acessibilidade de
+ * dados (banda de luminosidade, piso de croma, separacao para daltonismo em
+ * protanopia/deuteranopia/tritanopia, piso de visao normal e contraste contra a
+ * superficie), nos dois modos. Trocar um destes hex exige revalidar.
+ *
+ * A regra de uso do ocre e deliberada: ele marca **a posicao da pessoa** e nada
+ * mais — a linha do marcador, o numeral do percentil e a regua do item ativo na
+ * navegacao. Ele nunca preenche um botao nem vira gradiente decorativo; e o
+ * unico ponto quente da interface justamente para que signifique algo.
+ */
+
+@import 'tailwindcss';
+
+@theme {
+  /* Base institucional: tinta petroleo, papel frio. */
+  --color-ink: #0c2b33;
+  --color-ink-80: #2a4c54;
+  --color-ink-60: #5a777d;
+  --color-ink-40: #8ea5a9;
+  --color-paper: #f4f7f6;
+  --color-surface: #ffffff;
+  --color-line: #dce6e4;
+  --color-line-forte: #c2d2cf;
+
+  /* Serie categorica dos graficos — modo claro. */
+  --color-coorte: #00899b;
+  --color-voce: #bf5a00;
+  --color-serie-3: #6247d6;
+  --color-serie-4: #a3216f;
+
+  /* Preenchimentos fracos derivados, para areas grandes. */
+  --color-coorte-fraco: #d4ebef;
+  --color-voce-fraco: #f6e4d3;
+
+  /* Recusas fundamentadas (supressao por privacidade, dados nao combinaveis).
+     Vinho, nao vermelho de semaforo: o servico nao quebrou, ele se recusou. */
+  --color-vinho: #7a1f3d;
+  --color-vinho-fraco: #f7e8ed;
+
+  --font-display: 'Zilla Slab', Georgia, serif;
+  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+
+  --radius-cartao: 4px;
+  --shadow-cartao: 0 1px 2px rgb(12 43 51 / 0.06), 0 1px 1px rgb(12 43 51 / 0.04);
+  --shadow-elevado: 0 8px 24px rgb(12 43 51 / 0.12);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Todo numero e tabular: colunas de digitos nao dancam entre re-renders. */
+  table,
+  .numerico {
+    font-variant-numeric: tabular-nums;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    margin: 0;
+  }
+
+  /* Foco visivel e consistente em tudo que recebe teclado. */
+  :focus-visible {
+    outline: 2px solid var(--color-voce);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Prosa longa nao passa de ~70 caracteres. */
+  .prosa {
+    max-width: 68ch;
+  }
+}
+
+@layer components {
+  /* Regua vertical entre os numeros do painel de indicadores. A faixa e uma
+     superficie unica dividida por fios — cabecalho de relatorio estatistico —
+     e nao tres cartoes identicos com a mesma sombra. */
+  .indicadores > * + * {
+    border-inline-start: 1px solid var(--color-line);
+  }
+
+  @media (max-width: 767px) {
+    .indicadores > * + * {
+      border-inline-start: 0;
+      border-block-start: 1px solid var(--color-line);
+    }
+  }
+}
+
+/* Unico momento de movimento nao solicitado da interface: as barras do
+   histograma crescem da linha de base quando um resultado chega, porque e o
+   momento que a pessoa esperou. Nada mais anima sozinho. */
+@keyframes crescer-barra {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.barra-histograma {
+  transform-origin: bottom;
+  animation: crescer-barra 480ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barra-histograma {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}

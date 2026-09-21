@@ -28,6 +28,7 @@
  *    sinal — todo o significado esta no texto.
  */
 
+import { AlertCircle } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import {
@@ -36,10 +37,8 @@ import {
   CODIGO_TIMEOUT,
   type ErroApi,
 } from '@/lib/api';
+import { enumerarEdicoes, FORMATO_EDICAO } from '@/lib/formato';
 import { ROTULOS_DIMENSAO, type Dimensao } from '@/lib/tipos';
-
-/** Numeros de edicao formatados na lista de "edicoes que suportam". */
-const FORMATO_EDICAO = new Intl.NumberFormat('pt-BR', { useGrouping: false });
 
 export interface EstadoErroProps {
   erro: ErroApi;
@@ -90,13 +89,6 @@ function segundosDeEspera(detalhes: Record<string, unknown>): number | null {
 /** "na edicao 2023" quando o envelope diz qual; "nesta edicao" quando nao. */
 function naEdicao(edicao: number | null): string {
   return edicao === null ? 'nesta edicao' : `na edicao ${FORMATO_EDICAO.format(edicao)}`;
-}
-
-/** Junta numeros de edicao em uma enumeracao legivel ("2022, 2023 e 2025"). */
-function enumerarEdicoes(edicoes: number[]): string {
-  const rotulos = edicoes.map((edicao) => FORMATO_EDICAO.format(edicao));
-  if (rotulos.length <= 1) return rotulos.join('');
-  return `${rotulos.slice(0, -1).join(', ')} e ${rotulos[rotulos.length - 1] ?? ''}`;
 }
 
 /** Conteudo da mensagem: titulo curto, explicacao e orientacao do que fazer. */
@@ -247,11 +239,31 @@ export default function EstadoErro({ erro }: EstadoErroProps) {
   const { titulo, explicacao, orientacao } = mensagemDe(erro);
 
   return (
-    <section className="estado-erro" role="alert" aria-labelledby="estado-erro-titulo">
-      <h2 id="estado-erro-titulo">{titulo}</h2>
-      {explicacao}
-      {orientacao}
-      <p className="ajuda">Codigo do erro: {erro.codigo}</p>
+    <section
+      role="alert"
+      aria-labelledby="estado-erro-titulo"
+      className="overflow-hidden rounded-[4px] border border-[#e0b9c6] bg-surface"
+    >
+      <div className="flex items-start gap-3 border-l-2 border-vinho bg-vinho-fraco/60 px-5 py-4">
+        <AlertCircle
+          size={18}
+          aria-hidden="true"
+          strokeWidth={1.75}
+          className="mt-0.5 shrink-0 text-vinho"
+        />
+        <div className="min-w-0">
+          <h2 id="estado-erro-titulo" className="text-[16px] text-ink">
+            {titulo}
+          </h2>
+          <div className="prosa mt-2 space-y-2 text-sm leading-relaxed text-ink-80">
+            {explicacao}
+            {orientacao}
+          </div>
+        </div>
+      </div>
+      <p className="border-t border-line px-5 py-2 text-xs text-ink-40">
+        Codigo do erro: {erro.codigo}
+      </p>
     </section>
   );
 }

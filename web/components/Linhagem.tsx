@@ -24,16 +24,10 @@
  *    `dict[int, ...]` no backend, logo a busca aqui e por `String(edicao)`.
  */
 
+import { FileClock } from 'lucide-react';
+
+import { FORMATO_DATA_HORA, FORMATO_EDICAO } from '@/lib/formato';
 import type { Linhagem as LinhagemDados } from '@/lib/tipos';
-
-/** Data e hora da carga em pt-BR ("12 de marco de 2025 as 14:32"). */
-const FORMATO_DATA_HORA = new Intl.DateTimeFormat('pt-BR', {
-  dateStyle: 'long',
-  timeStyle: 'short',
-});
-
-/** Edicoes sem separador de milhar ("2023", nunca "2.023"). */
-const FORMATO_EDICAO = new Intl.NumberFormat('pt-BR', { useGrouping: false });
 
 export interface LinhagemProps {
   linhagem: LinhagemDados;
@@ -80,25 +74,40 @@ export default function Linhagem({ linhagem }: LinhagemProps) {
   const itens = itensDaLinhagem(linhagem);
 
   return (
-    <section className="linhagem" aria-labelledby="linhagem-titulo">
-      <h3 id="linhagem-titulo">Origem dos dados</h3>
+    <section
+      aria-labelledby="linhagem-titulo"
+      className="rounded-[4px] border border-line bg-paper px-5 py-4"
+    >
+      <h3
+        id="linhagem-titulo"
+        className="flex items-center gap-2 font-sans text-[13px] font-semibold tracking-normal text-ink-80"
+      >
+        <FileClock size={15} aria-hidden="true" strokeWidth={1.75} className="text-ink-40" />
+        Origem dos dados
+      </h3>
 
       {itens.length === 0 ? (
-        <p className="ajuda">
+        <p className="mt-2 text-xs text-ink-60">
           A resposta nao informou quais edicoes fundamentam este resultado.
         </p>
       ) : (
-        <ul className="linhagem-lista">
+        <ul className="mt-3 space-y-2">
           {itens.map((item) => (
-            <li key={item.edicao}>
-              <strong>Edicao {FORMATO_EDICAO.format(item.edicao)}</strong> —{' '}
+            <li key={item.edicao} className="text-xs leading-relaxed text-ink-60">
+              <strong className="font-semibold text-ink-80">
+                Edicao {FORMATO_EDICAO.format(item.edicao)}
+              </strong>{' '}
+              &mdash;{' '}
               {item.dataCarga !== null
                 ? `dados carregados em ${item.dataCarga}`
                 : 'data de carga nao disponivel'}
               .{' '}
               {item.manifesto !== null ? (
                 <>
-                  Manifesto: <code>{item.manifesto}</code>
+                  Manifesto:{' '}
+                  <code className="rounded-sm bg-surface px-1 py-0.5 text-[11px] text-ink-80">
+                    {item.manifesto}
+                  </code>
                 </>
               ) : (
                 <>Manifesto nao disponivel nesta instalacao.</>
@@ -108,7 +117,7 @@ export default function Linhagem({ linhagem }: LinhagemProps) {
         </ul>
       )}
 
-      <p className="ajuda">
+      <p className="prosa mt-3 border-t border-line pt-3 text-xs text-ink-40">
         A data de carga indica quando os microdados desta edicao entraram na base; o
         Manifesto identifica a versao exata do arquivo de origem que sustenta os numeros
         acima.

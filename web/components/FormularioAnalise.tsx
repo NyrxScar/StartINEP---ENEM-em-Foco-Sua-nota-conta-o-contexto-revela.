@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * `FormularioAnalise` — entrada de Nota, Area, Edicao e Recorte (task 12.2).
  *
@@ -30,10 +28,17 @@
  *    recorte, todo controle com `<label htmlFor>`, erros anunciados
  *    (`role="alert"`), mudancas de capacidade anunciadas (`aria-live="polite"`),
  *    e botao de envio com nome acessivel.
+ * 5. **A barra de filtros mostra o que nao existe.** Municipio aparece como
+ *    controle desabilitado com a razao ao lado, em vez de ser omitido: os
+ *    microdados publicados nao trazem o municipio da escola, e esconder o
+ *    controle faria a limitacao parecer um esquecimento da interface.
  */
 
+import { Search, SlidersHorizontal } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
+import Botao from '@/components/ui/Botao';
+import { Campo, Entrada, Selecao } from '@/components/ui/Campo';
 import {
   analisar,
   CODIGO_RESPOSTA_INVALIDA,
@@ -43,6 +48,7 @@ import {
   obterCapacidade,
 } from '@/lib/api';
 import { DIMENSOES_PERFIL, OPCOES_DIMENSAO } from '@/lib/dominios';
+import { enumerar } from '@/lib/formato';
 import {
   ROTULOS_AREA,
   ROTULOS_DIMENSAO,
@@ -116,12 +122,6 @@ function edicaoPadrao(lista: InfoEdicao[]): number | null {
   const comNotas = ordenadas.find((info) => info.capacidade.possui_notas);
   const escolhida = comNotas ?? ordenadas[0];
   return escolhida ? escolhida.edicao : null;
-}
-
-/** Junta rotulos em uma enumeracao legivel ("A, B e C"). */
-function enumerar(rotulos: string[]): string {
-  if (rotulos.length <= 1) return rotulos.join('');
-  return `${rotulos.slice(0, -1).join(', ')} e ${rotulos[rotulos.length - 1] ?? ''}`;
 }
 
 export default function FormularioAnalise({
@@ -378,142 +378,181 @@ export default function FormularioAnalise({
   }
 
   return (
-    <section aria-labelledby={`${base}-titulo`} className="painel">
-      <h2 id={`${base}-titulo`}>Informe sua nota</h2>
-
-      <form className="formulario" onSubmit={aoSubmeter} noValidate>
-        <div className="campo">
-          <label htmlFor={idNota}>Sua nota (de 0 a 1000)</label>
-          <input
-            ref={refNota}
-            id={idNota}
-            name="nota"
-            type="number"
-            inputMode="decimal"
-            min={NOTA_MINIMA}
-            max={NOTA_MAXIMA}
-            step={0.1}
-            value={notaTexto}
-            onChange={(evento) => {
-              setNotaTexto(evento.target.value);
-              if (erroNota !== null) setErroNota(null);
-            }}
-            aria-describedby={
-              erroNota !== null ? `${idNota}-erro ${idNota}-ajuda` : `${idNota}-ajuda`
-            }
-            aria-invalid={erroNota !== null || undefined}
-            required
-          />
-          <p className="ajuda" id={`${idNota}-ajuda`}>
-            Use ponto para o decimal, como 623.5.
+    <section
+      aria-labelledby={`${base}-titulo`}
+      className="overflow-hidden rounded-[4px] border border-line bg-surface"
+    >
+      <form onSubmit={aoSubmeter} noValidate>
+        <div className="border-b border-line p-5">
+          <h2 id={`${base}-titulo`} className="text-[17px] text-ink">
+            Informe sua nota
+          </h2>
+          <p className="prosa mt-1 text-sm text-ink-60">
+            A nota fica no seu navegador: ela viaja para a API apenas para ser
+            posicionada na distribuicao, e nada e gravado.
           </p>
-          {erroNota !== null && (
-            <p className="erro" id={`${idNota}-erro`} role="alert">
-              {erroNota}
-            </p>
-          )}
-        </div>
 
-        <div className="campo">
-          <label htmlFor={idArea}>Area</label>
-          <select
-            id={idArea}
-            name="area"
-            value={area}
-            onChange={(evento) => setArea(evento.target.value as Area)}
-          >
-            {TODAS_AREAS.map((valor) => (
-              <option key={valor} value={valor}>
-                {ROTULOS_AREA[valor]}
-              </option>
-            ))}
-          </select>
-        </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <Campo
+              id={idNota}
+              rotulo="Sua nota (de 0 a 1000)"
+              ajuda="Use ponto para o decimal, como 623.5."
+              erro={erroNota}
+            >
+              {(props) => (
+                <Entrada
+                  {...props}
+                  ref={refNota}
+                  name="nota"
+                  type="number"
+                  inputMode="decimal"
+                  min={NOTA_MINIMA}
+                  max={NOTA_MAXIMA}
+                  step={0.1}
+                  placeholder="623.5"
+                  value={notaTexto}
+                  required
+                  onChange={(evento) => {
+                    setNotaTexto(evento.target.value);
+                    if (erroNota !== null) setErroNota(null);
+                  }}
+                />
+              )}
+            </Campo>
 
-        <div className="campo">
-          <label htmlFor={idEdicao}>Edicao</label>
-          <select
-            id={idEdicao}
-            name="edicao"
-            value={edicaoSelecionada ?? ''}
-            disabled={carregandoEdicoes || edicoes.length === 0}
-            onChange={(evento) => {
-              const valor = Number(evento.target.value);
-              setEdicaoSelecionada(Number.isFinite(valor) ? valor : null);
-            }}
-            aria-describedby={`${idEdicao}-capacidade`}
+            <Campo id={idArea} rotulo="Area">
+              {(props) => (
+                <Selecao
+                  {...props}
+                  name="area"
+                  value={area}
+                  onChange={(evento) => setArea(evento.target.value as Area)}
+                >
+                  {TODAS_AREAS.map((valor) => (
+                    <option key={valor} value={valor}>
+                      {ROTULOS_AREA[valor]}
+                    </option>
+                  ))}
+                </Selecao>
+              )}
+            </Campo>
+
+            <Campo id={idEdicao} rotulo="Edicao">
+              {(props) => (
+                <Selecao
+                  {...props}
+                  name="edicao"
+                  value={edicaoSelecionada ?? ''}
+                  disabled={carregandoEdicoes || edicoes.length === 0}
+                  onChange={(evento) => {
+                    const valor = Number(evento.target.value);
+                    setEdicaoSelecionada(Number.isFinite(valor) ? valor : null);
+                  }}
+                >
+                  {edicoes.length === 0 && (
+                    <option value="">
+                      {carregandoEdicoes ? 'Carregando...' : 'Nenhuma edicao disponivel'}
+                    </option>
+                  )}
+                  {edicoes
+                    .slice()
+                    .sort((a, b) => b.edicao - a.edicao)
+                    .map((info) => (
+                      <option key={info.edicao} value={info.edicao}>
+                        {info.capacidade.possui_notas
+                          ? String(info.edicao)
+                          : `${info.edicao} (sem notas publicadas)`}
+                      </option>
+                    ))}
+                </Selecao>
+              )}
+            </Campo>
+          </div>
+
+          {/* O resumo de capacidade fica fora do `Campo` porque descreve a
+              edicao inteira, nao o controle; `aria-live` anuncia a troca. */}
+          <p
+            id={`${idEdicao}-capacidade`}
+            aria-live="polite"
+            className="prosa mt-3 text-xs leading-relaxed text-ink-60"
           >
-            {edicoes.length === 0 && (
-              <option value="">
-                {carregandoEdicoes ? 'Carregando...' : 'Nenhuma edicao disponivel'}
-              </option>
-            )}
-            {edicoes
-              .slice()
-              .sort((a, b) => b.edicao - a.edicao)
-              .map((info) => (
-                <option key={info.edicao} value={info.edicao}>
-                  {info.capacidade.possui_notas
-                    ? String(info.edicao)
-                    : `${info.edicao} (sem notas publicadas)`}
-                </option>
-              ))}
-          </select>
-          <p className="ajuda" id={`${idEdicao}-capacidade`} aria-live="polite">
             {resumoCapacidade}
           </p>
         </div>
 
-        <fieldset className="recorte">
-          <legend>Recorte (opcional)</legend>
-          <p className="ajuda">
+        {/* Barra de filtros: o recorte comparavel. */}
+        <fieldset className="border-b border-line bg-paper/60 p-5">
+          <legend className="flex items-center gap-2 px-1 text-[13px] font-semibold text-ink-80">
+            <SlidersHorizontal size={14} aria-hidden="true" strokeWidth={1.75} />
+            Recorte (opcional)
+          </legend>
+          <p className="prosa text-xs text-ink-60">
             Deixe em branco para comparar com toda a edicao. Cada filtro aplicado
             estreita o grupo de comparacao.
           </p>
 
-          {dimensoesDisponiveis.map((dimensao) => {
-            const idFiltro = `${base}-filtro-${dimensao}`;
-            const opcoes = OPCOES_DIMENSAO[dimensao];
-            const valor = filtros[dimensao] ?? '';
-            return (
-              <div className="campo" key={dimensao}>
-                <label htmlFor={idFiltro}>{ROTULOS_DIMENSAO[dimensao]}</label>
-                {opcoes !== undefined ? (
-                  <select
-                    id={idFiltro}
-                    name={dimensao}
-                    value={valor}
-                    onChange={(evento) => definirFiltro(dimensao, evento.target.value)}
-                  >
-                    <option value="">Sem filtro</option>
-                    {opcoes.map((opcao) => (
-                      <option key={opcao.valor} value={opcao.valor}>
-                        {opcao.rotulo}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    id={idFiltro}
-                    name={dimensao}
-                    type="text"
-                    value={valor}
-                    onChange={(evento) => definirFiltro(dimensao, evento.target.value)}
-                    aria-describedby={`${idFiltro}-ajuda`}
-                  />
-                )}
-                {opcoes === undefined && (
-                  <p className="ajuda" id={`${idFiltro}-ajuda`}>
-                    Informe o valor exatamente como aparece na base; deixe vazio para
-                    nao filtrar.
-                  </p>
-                )}
-              </div>
-            );
-          })}
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {dimensoesDisponiveis.map((dimensao) => {
+              const idFiltro = `${base}-filtro-${dimensao}`;
+              const opcoes = OPCOES_DIMENSAO[dimensao];
+              const valor = filtros[dimensao] ?? '';
+              return (
+                <Campo
+                  key={dimensao}
+                  id={idFiltro}
+                  rotulo={ROTULOS_DIMENSAO[dimensao]}
+                  ajuda={
+                    opcoes === undefined
+                      ? 'Informe o valor exatamente como aparece na base; deixe vazio para nao filtrar.'
+                      : undefined
+                  }
+                >
+                  {(props) =>
+                    opcoes !== undefined ? (
+                      <Selecao
+                        {...props}
+                        name={dimensao}
+                        value={valor}
+                        onChange={(evento) => definirFiltro(dimensao, evento.target.value)}
+                      >
+                        <option value="">Sem filtro</option>
+                        {opcoes.map((opcao) => (
+                          <option key={opcao.valor} value={opcao.valor}>
+                            {opcao.rotulo}
+                          </option>
+                        ))}
+                      </Selecao>
+                    ) : (
+                      <Entrada
+                        {...props}
+                        name={dimensao}
+                        type="text"
+                        value={valor}
+                        onChange={(evento) => definirFiltro(dimensao, evento.target.value)}
+                      />
+                    )
+                  }
+                </Campo>
+              );
+            })}
+
+            {/* Municipio nao existe no contrato da API. O controle aparece
+                desabilitado, com a razao, em vez de sumir da barra. */}
+            <Campo
+              id={`${base}-filtro-municipio`}
+              rotulo="Municipio"
+              ajuda="Os microdados publicados nao trazem o municipio; o recorte mais fino de localizacao e a UF."
+            >
+              {(props) => (
+                <Selecao {...props} disabled value="">
+                  <option value="">Nao publicado nos microdados</option>
+                </Selecao>
+              )}
+            </Campo>
+          </div>
 
           {dimensoesDisponiveis.length === 0 && (
-            <p className="ajuda">
+            <p className="prosa mt-3 text-xs text-ink-60">
               {capacidade === null
                 ? 'Escolha uma edicao para ver os recortes disponiveis.'
                 : 'Nenhum recorte esta disponivel para analise de nota nesta edicao.'}
@@ -521,25 +560,30 @@ export default function FormularioAnalise({
           )}
         </fieldset>
 
-        {razaoBloqueio !== null && (
-          <p className="aviso" id={`${base}-bloqueio`} role="alert">
-            {razaoBloqueio}
-          </p>
-        )}
-
-        <div className="acoes">
-          <button
+        <div className="flex flex-wrap items-center gap-3 p-5">
+          <Botao
             type="submit"
             disabled={!podeSubmeter}
+            icone={<Search size={15} strokeWidth={2} />}
             aria-describedby={razaoBloqueio !== null ? `${base}-bloqueio` : undefined}
           >
             {enviando ? 'Consultando...' : 'Ver minha posicao'}
-          </button>
+          </Botao>
 
           {erroEdicoes !== null && (
-            <button type="button" onClick={() => setTentativaEdicoes((n) => n + 1)}>
+            <Botao variante="secundario" onClick={() => setTentativaEdicoes((n) => n + 1)}>
               Tentar novamente
-            </button>
+            </Botao>
+          )}
+
+          {razaoBloqueio !== null && (
+            <p
+              id={`${base}-bloqueio`}
+              role="alert"
+              className="prosa flex-1 text-xs leading-relaxed text-vinho"
+            >
+              {razaoBloqueio}
+            </p>
           )}
         </div>
       </form>

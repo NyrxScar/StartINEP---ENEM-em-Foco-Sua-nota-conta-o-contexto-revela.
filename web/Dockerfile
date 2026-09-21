@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ============================================================================
-# Imagem do frontend Next.js do Radar ENEM (Req 7.1).
+# Imagem do frontend do Radar ENEM (Vite + React), Req 7.1.
 #
 # Empacotada de forma **independente** da imagem da API: nada de Python,
 # `radar_api` ou da camada silver entra aqui. O frontend so conhece a API pela
@@ -9,36 +9,35 @@
 #
 # Build (raiz do repositorio):
 #     docker build -t radar-web:dev web/
-#     docker build -t radar-web:prod --build-arg NEXT_PUBLIC_API_URL=https://api.exemplo.org web/
+#     docker build -t radar-web:prod --build-arg VITE_API_URL=https://api.exemplo.org web/
 #
 # Execucao:
-#     docker run --rm -p 3000:3000 radar-web:dev
-#     docker run --rm -p 8080:8080 -e PORT=8080 radar-web:dev
+#     docker run --rm -p 8080:8080 radar-web:dev
 #
 # ---------------------------------------------------------------------------
-# DECISAO: `NEXT_PUBLIC_API_URL` e um ARG de **build**, nao de runtime.
+# DECISAO: `VITE_API_URL` e um ARG de **build**, nao de runtime.
 #
-# `web/lib/api.ts` le `process.env.NEXT_PUBLIC_API_URL`, e `PainelAnalise` /
-# `FormularioAnalise` sao Client Components — ou seja, a chamada acontece no
-# navegador. O Next **inlineia** qualquer `NEXT_PUBLIC_*` no bundle do cliente
-# em tempo de `next build`; definir a variavel apenas em `docker run` NAO
-# alteraria o codigo ja compilado que roda no browser.
+# `web/lib/api.ts` le `import.meta.env.VITE_API_URL`, e a chamada acontece no
+# navegador. O Vite **substitui literalmente** qualquer `VITE_*` no bundle em
+# tempo de `vite build`; definir a variavel apenas em `docker run` NAO alteraria
+# o JavaScript ja compilado que roda no cliente.
 #
 # Consequencia operacional: a imagem e **especifica do ambiente**. Trocar a URL
-# da API exige **reconstruir** a imagem com outro `--build-arg`. Na pratica,
-# uma imagem por ambiente (dev/homolog/prod), com a URL como parte da tag.
+# da API exige **reconstruir** com outro `--build-arg`. Na pratica, uma imagem
+# por ambiente (dev/homolog/prod), com a URL como parte da tag.
 #
-# Alternativa considerada e descartada nesta task: mover a chamada para o
-# servidor (Server Component ou rota `app/api/*` como proxy) e ler a URL do
-# ambiente do processo — ai a variavel passaria a ser de runtime e uma unica
-# imagem serviria todos os ambientes. Isso mudaria `web/lib/api.ts` e os
-# componentes (fora do escopo desta task, que so empacota o que existe).
+# Alternativa considerada e nao adotada: servir um `config.json` ao lado do
+# index e busca-lo no boot da aplicacao — uma unica imagem serviria todos os
+# ambientes, ao custo de um ida-e-volta antes da primeira requisicao util e de
+# uma segunda fonte de configuracao para manter. Com uma imagem por ambiente ja
+# no pipeline, o ganho nao paga a complexidade.
 #
 # O default abaixo aponta para o uvicorn local: e um valor de desenvolvimento,
 # nao ha URL de producao nem segredo embutido na imagem.
 # ============================================================================
 
 ARG NODE_VERSION=22.13.0-alpine3.21
+ARG NGINX_VERSION=1.27-alpine
 
 # ---------------------------------------------------------------------------
 # Estagio 1 — deps: instala dependencias a partir do lockfile.
@@ -54,65 +53,46 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 # ---------------------------------------------------------------------------
-# Estagio 2 — builder: `next build` com `output: 'standalone'`.
+# Estagio 2 — builder: typecheck + `vite build`.
 # ---------------------------------------------------------------------------
 FROM node:${NODE_VERSION} AS builder
 
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY package.json package-lock.json next.config.ts tsconfig.json next-env.d.ts .eslintrc.json ./
-COPY app ./app
+COPY package.json package-lock.json vite.config.ts tsconfig.json index.html styles.css ./
+COPY main.tsx App.tsx ./
 COPY components ./components
 COPY lib ./lib
+COPY pages ./pages
+COPY public ./public
 
-# `public/` ainda nao existe no projeto; criado vazio para que o COPY do
-# estagio de runtime seja estavel se/quando assets estaticos forem adicionados.
-RUN mkdir -p public
-
-# Inlineado no bundle do cliente aqui — ver a DECISAO no topo do arquivo.
-ARG NEXT_PUBLIC_API_URL=http://localhost:8000
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-
-ENV NEXT_TELEMETRY_DISABLED=1
+# Substituido literalmente no bundle aqui — ver a DECISAO no topo do arquivo.
+ARG VITE_API_URL=http://localhost:8000
+ENV VITE_API_URL=${VITE_API_URL}
 ENV NODE_ENV=production
 
+# `npm run build` roda `tsc --noEmit && vite build`: um erro de tipo falha a
+# imagem em vez de produzir um bundle quebrado.
 RUN npm run build
 
 # ---------------------------------------------------------------------------
-# Estagio 3 — runner: imagem final enxuta.
+# Estagio 3 — runner: nginx servindo arquivos estaticos.
 #
-# Recebe apenas o servidor standalone (com o subconjunto de node_modules que o
-# tracing do Next considerou alcancavel), os assets estaticos e `public/`.
-# Nao ha `npm`, codigo-fonte TypeScript, dependencias de desenvolvimento nem
-# lockfile na imagem final.
+# O build do Vite e HTML/CSS/JS puro: nao ha processo Node em producao, nenhum
+# `node_modules`, nenhum codigo-fonte TypeScript e nenhuma dependencia de
+# desenvolvimento na imagem final — apenas o conteudo de `dist/`.
+#
+# A variante `nginx-unprivileged` ja roda como usuario nao-root na porta 8080,
+# sem precisar remendar permissoes nem o arquivo de PID.
 # ---------------------------------------------------------------------------
-FROM node:${NODE_VERSION} AS runner
+FROM nginxinc/nginx-unprivileged:${NGINX_VERSION} AS runner
 
-WORKDIR /app
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+EXPOSE 8080
 
-# Porta configuravel; o servidor standalone le PORT e HOSTNAME do ambiente.
-# HOSTNAME=0.0.0.0 e obrigatorio: em 127.0.0.1 o processo ficaria inalcancavel
-# de fora do contêiner.
-ENV PORT=3000
-ENV HOSTNAME=0.0.0.0
-
-# Nao rodamos como root. A imagem oficial do Node ja traz o usuario `node`
-# (uid/gid 1000); os arquivos copiados pertencem a ele.
-COPY --from=builder --chown=node:node /app/.next/standalone ./
-COPY --from=builder --chown=node:node /app/.next/static ./.next/static
-COPY --from=builder --chown=node:node /app/public ./public
-
-USER node
-
-EXPOSE 3000
-
-# Health-check sem dependencias extras: `fetch` global do Node 22, nenhum
-# curl/wget instalado. Usa a PORT efetiva do contêiner.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
-
-CMD ["node", "server.js"]
+# Health-check com o wget do BusyBox, ja presente na imagem alpine.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget -q --spider http://127.0.0.1:8080/ || exit 1

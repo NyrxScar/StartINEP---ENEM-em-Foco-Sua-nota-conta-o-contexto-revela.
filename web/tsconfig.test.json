@@ -1,0 +1,13 @@
+{
+  // Checagem de tipos dos testes de componente. Separado de `tsconfig.json`
+  // porque o build de producao nao ve `test/` — e e `test/setup.ts` que
+  // registra os tipos dos matchers de `@testing-library/jest-dom`.
+  //
+  // `npm run typecheck` roda os dois; `npm run build` roda so o da aplicacao.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client", "vitest/globals"]
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,38 +1,28 @@
 /**
- * `VisualizacaoResultado` — grafico da Distribuicao com a posicao do usuario e
- * o **equivalente textual acessivel** (task 12.3; Req 4.2 e 4.4).
+ * `VisualizacaoResultado` — o achado: percentil, distribuicao e os numeros que
+ * o sustentam (Req 4.2 e 4.4).
  *
- * Decisoes de projeto:
+ * Decisoes:
  *
- * 1. **Grafico em SVG inline, sem biblioteca.** O histograma vem pronto da API
- *    (`distribuicao.faixas`, faixas de largura uniforme com `contagem`), logo o
- *    trabalho restante e so escalar retangulos. Uma dependencia de charting
- *    (recharts/chart.js/d3) adicionaria centenas de KB ao bundle, obrigaria a
- *    tornar a arvore inteira client-side e ainda exigiria o mesmo esforco de
- *    acessibilidade — o SVG e desenhado a mao e o componente permanece um
- *    Server Component (nao ha `'use client'` aqui: nenhum estado, nenhum efeito).
- * 2. **O grafico nunca e o unico portador de significado** (Req 4.4). O SVG e
- *    `role="img"` com `<title>` + `aria-label` resumindo o achado, e todo o seu
- *    interior e `aria-hidden` (barras, eixo e rotulos sao decorativos). O
- *    conteudo real vive fora dele: um paragrafo em prosa com o percentil e o
- *    tamanho amostral, uma tabela de quantis e uma tabela de faixas — todas
- *    renderizadas de verdade, com `<caption>` e `<th scope>`. Nada e escondido
- *    com `display: none`; a tabela de faixas fica em um `<details open>`, ou
- *    seja, expandida (e exposta a tecnologia assistiva) por padrao, e recolher
- *    e uma escolha da pessoa.
- * 3. **Posicao do usuario derivada do percentil.** O `ResultadoAnalise` carrega
- *    o percentil, nao a nota informada (a API responde apenas agregados), por
- *    isso o marcador e localizado invertendo a distribuicao cumulativa das
- *    faixas: e uma posicao *aproximada*, e os rotulos dizem isso.
- * 4. **Amostra insuficiente = nenhum numero inventado** (Req 4.4 / 9.3). Quando
- *    `estatisticamente_insuficiente` e verdadeiro — ou quando a guarda de
- *    privacidade anulou `distribuicao`/`percentil` — nao ha grafico, nao ha
- *    tabela e nenhuma contagem e exposta, apenas a explicacao. O polimento
- *    completo dos estados de UI e da task 12.4.
- * 5. **Formatacao pt-BR explicita** (`Intl.NumberFormat('pt-BR', ...)`), com
- *    numero de casas decimais fixo, para nao depender do locale do ambiente.
+ * 1. **O percentil e o unico numero grande da tela.** Ele responde a pergunta
+ *    que trouxe a pessoa ate aqui; quantis, contagens e faixas sao evidencia e
+ *    ficam em corpo de texto e tabela. Espalhar varios numeros gigantes
+ *    dissolveria a resposta em um painel de metricas.
+ * 2. **O grafico nao carrega significado sozinho.** Ele e `role="img"` com
+ *    resumo em prosa, e os mesmos numeros aparecem em duas tabelas reais, com
+ *    `<caption>` e `<th scope>`. Nada e escondido com `display: none`.
+ * 3. **Posicao derivada do percentil.** A API responde apenas agregados — ela
+ *    devolve o percentil, nunca a nota informada de volta — entao o marcador e
+ *    localizado invertendo a distribuicao cumulativa das faixas. E uma posicao
+ *    aproximada, e os rotulos dizem isso.
+ * 4. **Amostra insuficiente nao inventa numero.** Com a guarda de privacidade
+ *    ativa nao ha grafico, tabela, percentil nem contagem: so a explicacao do
+ *    porque (Req 4.4 / 9.3).
  */
 
+import Histograma, { rotuloFaixa, type PosicaoUsuario } from '@/components/Histograma';
+import TabelaDados from '@/components/ui/TabelaDados';
+import { FORMATO_INTEIRO, FORMATO_UMA_CASA } from '@/lib/formato';
 import {
   ROTULOS_AREA,
   type Distribuicao,
@@ -40,40 +30,8 @@ import {
   type ResultadoAnalise,
 } from '@/lib/tipos';
 
-/** Contagens e tamanho amostral: inteiros com separador de milhar pt-BR. */
-const FORMATO_INTEIRO = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
-
-/** Notas e percentil: uma casa decimal, sempre presente (determinismo). */
-const FORMATO_UMA_CASA = new Intl.NumberFormat('pt-BR', {
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 1,
-});
-
-/** Participacao de uma faixa no grupo, em pontos percentuais. */
-const FORMATO_PARTICIPACAO = new Intl.NumberFormat('pt-BR', {
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 1,
-});
-
-/** Geometria do SVG (unidades de `viewBox`; o tamanho real e fluido via CSS). */
-const LARGURA = 640;
-const ALTURA = 260;
-const MARGEM = { topo: 16, direita: 16, base: 44, esquerda: 16 } as const;
-const LARGURA_PLOT = LARGURA - MARGEM.esquerda - MARGEM.direita;
-const ALTURA_PLOT = ALTURA - MARGEM.topo - MARGEM.base;
-
 export interface VisualizacaoResultadoProps {
   resultado: ResultadoAnalise;
-}
-
-/** Posicao aproximada do usuario, em coordenadas de faixa. */
-interface PosicaoUsuario {
-  /** Indice da faixa que contem a posicao. */
-  indice: number;
-  /** Fracao (0..1) percorrida dentro dessa faixa. */
-  fracao: number;
-  /** Nota estimada correspondente, interpolada dentro da faixa. */
-  nota: number;
 }
 
 /**
@@ -108,131 +66,7 @@ export function estimarPosicao(
   return null;
 }
 
-/** Ancora do rotulo do marcador, para nao vazar das bordas do SVG. */
-function ancora(x: number): 'start' | 'middle' | 'end' {
-  if (x < MARGEM.esquerda + LARGURA_PLOT * 0.15) return 'start';
-  if (x > MARGEM.esquerda + LARGURA_PLOT * 0.85) return 'end';
-  return 'middle';
-}
-
-/** Rotulo textual de uma faixa ("500,0 a 550,0"). */
-function rotuloFaixa(faixa: FaixaHistograma): string {
-  return `${FORMATO_UMA_CASA.format(faixa.limite_inferior)} a ${FORMATO_UMA_CASA.format(
-    faixa.limite_superior,
-  )}`;
-}
-
-/**
- * Histograma em SVG. `role="img"` + `aria-label` entregam o resumo; o interior e
- * `aria-hidden` porque o conteudo equivalente esta nas tabelas ao lado.
- */
-function Histograma({
-  faixas,
-  posicao,
-  descricao,
-}: {
-  faixas: FaixaHistograma[];
-  posicao: PosicaoUsuario | null;
-  descricao: string;
-}) {
-  const maiorContagem = faixas.reduce((maior, faixa) => Math.max(maior, faixa.contagem), 0);
-  const larguraBarra = LARGURA_PLOT / faixas.length;
-  const base = MARGEM.topo + ALTURA_PLOT;
-  const primeira = faixas[0];
-  const ultima = faixas[faixas.length - 1];
-
-  const xMarcador =
-    posicao === null
-      ? null
-      : MARGEM.esquerda + (posicao.indice + posicao.fracao) * larguraBarra;
-
-  return (
-    <svg
-      className="grafico"
-      viewBox={`0 0 ${LARGURA} ${ALTURA}`}
-      role="img"
-      aria-label={descricao}
-    >
-      <title>{descricao}</title>
-      <g aria-hidden="true">
-        {faixas.map((faixa, indice) => {
-          const altura =
-            maiorContagem > 0 ? (faixa.contagem / maiorContagem) * ALTURA_PLOT : 0;
-          const destacada = posicao !== null && posicao.indice === indice;
-          return (
-            <rect
-              key={`${faixa.limite_inferior}-${faixa.limite_superior}`}
-              className={destacada ? 'grafico-barra grafico-barra--posicao' : 'grafico-barra'}
-              x={MARGEM.esquerda + indice * larguraBarra + larguraBarra * 0.1}
-              y={base - altura}
-              width={Math.max(larguraBarra * 0.8, 1)}
-              height={Math.max(altura, faixa.contagem > 0 ? 1 : 0)}
-            />
-          );
-        })}
-
-        <line
-          className="grafico-eixo"
-          x1={MARGEM.esquerda}
-          y1={base}
-          x2={MARGEM.esquerda + LARGURA_PLOT}
-          y2={base}
-        />
-
-        {xMarcador !== null && (
-          <>
-            <line
-              className="grafico-marcador"
-              x1={xMarcador}
-              y1={MARGEM.topo}
-              x2={xMarcador}
-              y2={base}
-            />
-            <text
-              className="grafico-rotulo grafico-rotulo--marcador"
-              x={xMarcador}
-              y={MARGEM.topo + 12}
-              textAnchor={ancora(xMarcador)}
-            >
-              sua posicao
-            </text>
-          </>
-        )}
-
-        {primeira !== undefined && (
-          <text
-            className="grafico-rotulo"
-            x={MARGEM.esquerda}
-            y={base + 20}
-            textAnchor="start"
-          >
-            {FORMATO_UMA_CASA.format(primeira.limite_inferior)}
-          </text>
-        )}
-        {ultima !== undefined && (
-          <text
-            className="grafico-rotulo"
-            x={MARGEM.esquerda + LARGURA_PLOT}
-            y={base + 20}
-            textAnchor="end"
-          >
-            {FORMATO_UMA_CASA.format(ultima.limite_superior)}
-          </text>
-        )}
-        <text
-          className="grafico-rotulo"
-          x={MARGEM.esquerda + LARGURA_PLOT / 2}
-          y={base + 36}
-          textAnchor="middle"
-        >
-          nota
-        </text>
-      </g>
-    </svg>
-  );
-}
-
-/** Tabela de quantis: uma linha por medida, cabecalhos de linha e de coluna. */
+/** Tabela de quantis: uma linha por medida. */
 function TabelaQuantis({
   distribuicao,
   rotuloArea,
@@ -243,7 +77,7 @@ function TabelaQuantis({
   edicao: number;
 }) {
   const { quantis } = distribuicao;
-  const linhas: Array<{ medida: string; valor: number }> = [
+  const linhas = [
     { medida: 'Menor nota (minimo)', valor: quantis.minimo },
     { medida: 'Primeiro quartil (Q1)', valor: quantis.q1 },
     { medida: 'Mediana', valor: quantis.mediana },
@@ -252,25 +86,21 @@ function TabelaQuantis({
   ];
 
   return (
-    <table className="tabela-dados">
-      <caption>
-        Quantis das notas de {rotuloArea} no grupo comparado, edicao {edicao}
-      </caption>
-      <thead>
-        <tr>
-          <th scope="col">Medida</th>
-          <th scope="col">Nota</th>
-        </tr>
-      </thead>
-      <tbody>
-        {linhas.map((linha) => (
-          <tr key={linha.medida}>
-            <th scope="row">{linha.medida}</th>
-            <td>{FORMATO_UMA_CASA.format(linha.valor)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <TabelaDados
+      legenda={`Quantis das notas de ${rotuloArea} no grupo comparado, edicao ${edicao}`}
+      colunas={[
+        { chave: 'medida', cabecalho: 'Medida', celula: (linha) => linha.medida },
+        {
+          chave: 'valor',
+          cabecalho: 'Nota',
+          alinhamento: 'fim',
+          largura: '40%',
+          celula: (linha) => FORMATO_UMA_CASA.format(linha.valor),
+        },
+      ]}
+      linhas={linhas}
+      chaveLinha={(linha) => linha.medida}
+    />
   );
 }
 
@@ -288,35 +118,44 @@ function TabelaFaixas({
   rotuloArea: string;
   edicao: number;
 }) {
+  const linhas = faixas.map((faixa, indice) => ({ faixa, indice }));
+
   return (
-    <table className="tabela-dados">
-      <caption>
-        Distribuicao das notas de {rotuloArea} por faixa no grupo comparado, edicao{' '}
-        {edicao}
-      </caption>
-      <thead>
-        <tr>
-          <th scope="col">Faixa de nota</th>
-          <th scope="col">Pessoas</th>
-          <th scope="col">Participacao</th>
-          <th scope="col">Sua posicao</th>
-        </tr>
-      </thead>
-      <tbody>
-        {faixas.map((faixa, indice) => (
-          <tr key={`${faixa.limite_inferior}-${faixa.limite_superior}`}>
-            <th scope="row">{rotuloFaixa(faixa)}</th>
-            <td>{FORMATO_INTEIRO.format(faixa.contagem)}</td>
-            <td>
-              {total > 0
-                ? `${FORMATO_PARTICIPACAO.format((faixa.contagem / total) * 100)}%`
-                : 'nao aplicavel'}
-            </td>
-            <td>{posicao !== null && posicao.indice === indice ? 'sua nota esta aqui' : ''}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <TabelaDados
+      legenda={`Distribuicao das notas de ${rotuloArea} por faixa no grupo comparado, edicao ${edicao}`}
+      paginaTamanho={10}
+      destacar={({ indice }) => posicao !== null && posicao.indice === indice}
+      colunas={[
+        {
+          chave: 'faixa',
+          cabecalho: 'Faixa de nota',
+          celula: ({ faixa }) => rotuloFaixa(faixa),
+        },
+        {
+          chave: 'pessoas',
+          cabecalho: 'Pessoas',
+          alinhamento: 'fim',
+          celula: ({ faixa }) => FORMATO_INTEIRO.format(faixa.contagem),
+        },
+        {
+          chave: 'participacao',
+          cabecalho: 'Participacao',
+          alinhamento: 'fim',
+          celula: ({ faixa }) =>
+            total > 0
+              ? `${FORMATO_UMA_CASA.format((faixa.contagem / total) * 100)}%`
+              : 'nao aplicavel',
+        },
+        {
+          chave: 'posicao',
+          cabecalho: 'Sua posicao',
+          celula: ({ indice }) =>
+            posicao !== null && posicao.indice === indice ? 'sua nota esta aqui' : '',
+        },
+      ]}
+      linhas={linhas}
+      chaveLinha={({ faixa }) => `${faixa.limite_inferior}-${faixa.limite_superior}`}
+    />
   );
 }
 
@@ -324,13 +163,20 @@ export default function VisualizacaoResultado({ resultado }: VisualizacaoResulta
   const rotuloArea = ROTULOS_AREA[resultado.area];
   const { distribuicao, percentil } = resultado;
 
-  // Amostra insuficiente ou detalhes anulados pela guarda de privacidade: nenhum
-  // grafico, nenhuma contagem, nenhum numero inventado (Req 4.4 / 9.3).
+  // Amostra insuficiente ou detalhes anulados pela guarda de privacidade.
   if (resultado.estatisticamente_insuficiente || distribuicao === null || percentil === null) {
     return (
-      <section className="painel visualizacao" aria-labelledby="resultado-titulo">
-        <h2 id="resultado-titulo">Sua posicao</h2>
-        <p className="aviso" role="status">
+      <section
+        aria-labelledby="resultado-titulo"
+        className="rounded-[4px] border border-line bg-surface"
+      >
+        <h2 id="resultado-titulo" className="border-b border-line px-5 py-4 text-[17px]">
+          Sua posicao
+        </h2>
+        <p
+          role="status"
+          className="prosa border-l-2 border-vinho bg-vinho-fraco/50 px-5 py-4 text-sm leading-relaxed text-ink-80"
+        >
           O grupo formado por este recorte e pequeno demais para divulgar a
           distribuicao com seguranca, portanto nao exibimos percentil, quantis nem
           contagens — e assim que a desidentificacao dos microdados e respeitada.
@@ -358,61 +204,82 @@ export default function VisualizacaoResultado({ resultado }: VisualizacaoResulta
     ' Os mesmos numeros estao nas tabelas a seguir.';
 
   return (
-    <section className="painel visualizacao" aria-labelledby="resultado-titulo">
-      <h2 id="resultado-titulo">Sua posicao</h2>
+    <section aria-labelledby="resultado-titulo" className="space-y-6">
+      <h2 id="resultado-titulo" className="sr-only">
+        Sua posicao
+      </h2>
 
-      <p className="destaque">
-        Sua nota de {rotuloArea} esta acima de {percentilFormatado}% das notas do grupo
-        comparado na edicao {resultado.edicao}.
-      </p>
+      {/* O achado. Sem cartao em volta: o numero e o grafico sao a pagina. */}
+      <div>
+        {/* Uma unica corrida de texto, sem `<span>` no meio: o percentil ja
+            aparece grande e em ocre na faixa de indicadores logo acima, e
+            realca-lo duas vezes gastaria o acento do produto em dobro. Manter a
+            frase inteira tambem a preserva como equivalente textual continuo da
+            distribuicao (Req 4.4). */}
+        <p className="numerico font-display text-[clamp(1.35rem,3.2vw,1.95rem)] leading-[1.2] text-ink">
+          Sua nota de {rotuloArea} esta acima de {percentilFormatado}% das notas do
+          grupo comparado na edicao {resultado.edicao}.
+        </p>
 
-      <p>
-        {resultado.tamanho_amostral !== null
-          ? `O grupo comparado tem ${FORMATO_INTEIRO.format(
-              resultado.tamanho_amostral,
-            )} pessoas com nota valida em ${rotuloArea}. `
-          : ''}
-        Metade do grupo ficou abaixo de{' '}
-        {FORMATO_UMA_CASA.format(distribuicao.quantis.mediana)} pontos, e o intervalo
-        central (do primeiro ao terceiro quartil) vai de{' '}
-        {FORMATO_UMA_CASA.format(distribuicao.quantis.q1)} a{' '}
-        {FORMATO_UMA_CASA.format(distribuicao.quantis.q3)} pontos.
-      </p>
+        <p className="prosa mt-3 text-[15px] leading-relaxed text-ink-80">
+          {resultado.tamanho_amostral !== null
+            ? `O grupo comparado tem ${FORMATO_INTEIRO.format(
+                resultado.tamanho_amostral,
+              )} pessoas com nota valida em ${rotuloArea}. `
+            : ''}
+          Metade do grupo ficou abaixo de{' '}
+          {FORMATO_UMA_CASA.format(distribuicao.quantis.mediana)} pontos, e o intervalo
+          central (do primeiro ao terceiro quartil) vai de{' '}
+          {FORMATO_UMA_CASA.format(distribuicao.quantis.q1)} a{' '}
+          {FORMATO_UMA_CASA.format(distribuicao.quantis.q3)} pontos.
+        </p>
+      </div>
 
       {faixas.length > 0 && total > 0 ? (
-        <>
+        <div>
           <Histograma faixas={faixas} posicao={posicao} descricao={descricaoGrafico} />
-          <p className="ajuda">
+          <p className="prosa mt-2 text-xs text-ink-60">
             Cada barra e uma faixa de nota; a altura e quantas pessoas do grupo caem
             nela. A linha vertical marca, de forma aproximada, onde sua nota entra
             (percentil {percentilFormatado}).
           </p>
-        </>
+        </div>
       ) : (
-        <p className="ajuda">
+        <p className="prosa text-sm text-ink-60">
           O histograma nao esta disponivel para este recorte; os quantis abaixo
           descrevem a distribuicao.
         </p>
       )}
 
-      <TabelaQuantis
-        distribuicao={distribuicao}
-        rotuloArea={rotuloArea}
-        edicao={resultado.edicao}
-      />
-
-      {faixas.length > 0 && (
-        <details className="detalhes-dados" open>
-          <summary>Numeros de cada faixa do grafico</summary>
-          <TabelaFaixas
-            faixas={faixas}
-            total={total}
-            posicao={posicao}
+      {/* `items-start`: sem isto o cartao de quantis esticaria ate a altura da
+          tabela de faixas, deixando um vazio grande sob cinco linhas. */}
+      <div className="grid items-start gap-5 lg:grid-cols-2">
+        <div className="overflow-hidden rounded-[4px] border border-line bg-surface pt-4">
+          <TabelaQuantis
+            distribuicao={distribuicao}
             rotuloArea={rotuloArea}
             edicao={resultado.edicao}
           />
-        </details>
-      )}
+        </div>
+
+        {faixas.length > 0 && (
+          <details
+            open
+            className="group overflow-hidden rounded-[4px] border border-line bg-surface"
+          >
+            <summary className="cursor-pointer list-none px-5 py-4 text-[13px] font-medium text-ink transition-colors hover:bg-paper">
+              Numeros de cada faixa do grafico
+            </summary>
+            <TabelaFaixas
+              faixas={faixas}
+              total={total}
+              posicao={posicao}
+              rotuloArea={rotuloArea}
+              edicao={resultado.edicao}
+            />
+          </details>
+        )}
+      </div>
     </section>
   );
 }

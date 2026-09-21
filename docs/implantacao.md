@@ -19,8 +19,8 @@ Três peças, sendo uma delas externa ao sistema:
 
 - **API** — pacote Python `radar_api` (FastAPI + DuckDB embarcado), *stateless*. Entrypoint ASGI
   `radar_api.app:app`.
-- **Frontend** — aplicação Next.js 15 / React 19 (App Router, TypeScript), *stateless*. Conhece a
-  API apenas por uma URL base HTTP.
+- **Frontend** — aplicação React 19 + Vite (TypeScript), compilada para arquivos **estáticos** e
+  servida por nginx. Não há processo Node em produção. Conhece a API apenas por uma URL base HTTP.
 - **Camada *silver*** — Parquet particionado, **contrato de entrada externo**. Não é construída nem
   escrita por este sistema: é **montada** no contêiner da API em tempo de execução, somente leitura.
 
@@ -31,7 +31,7 @@ flowchart LR
         ING["Roteamento por caminho"]
     end
     subgraph EXEC["Plano de execução de contêineres"]
-        WEB["Contêiner web<br/>Next.js standalone<br/>porta 3000"]
+        WEB["Contêiner web<br/>nginx + build estático<br/>porta 8080"]
         API["Contêiner api<br/>uvicorn + radar_api<br/>porta 8000"]
     end
     SILVER[("Camada silver<br/>Parquet ano=/uf_prova=<br/>somente leitura")]
@@ -45,8 +45,8 @@ flowchart LR
 
 Observações que afetam a topologia:
 
-- O `fetch` para a API sai do **navegador** (`PainelAnalise`/`FormularioAnalise` são Client
-  Components), não do servidor Next. Logo a URL da API precisa ser alcançável pelo cliente final.
+- O `fetch` para a API sai do **navegador**: o frontend é uma aplicação de página única e não tem
+  servidor próprio para intermediar. Logo a URL da API precisa ser alcançável pelo cliente final.
 - **Não há middleware de CORS na aplicação FastAPI** (verificado: nenhuma chamada a
   `add_middleware`/`CORSMiddleware` em `api/src`). Portanto, coloque frontend e API **na mesma
   origem**, roteando por caminho na borda (`/` → web, `/v1` e `/health` → api). Servir os dois em
@@ -61,19 +61,22 @@ Observações que afetam a topologia:
 | Artefato | Contexto de build | Porta | Processo |
 |---|---|---|---|
 | `api/Dockerfile` | `api/` | 8000 (`PORT`) | `uvicorn radar_api.app:app` |
-| `web/Dockerfile` | `web/` | 3000 (`PORT`) | `node server.js` (Next standalone) |
+| `web/Dockerfile` | `web/` | 8080 | `nginx` servindo `dist/` |
 
 Os dois Dockerfiles são **a fonte de verdade** sobre o empacotamento; o que segue é o resumo
 operacional deles (lido dos arquivos):
 
-- Ambos são multiestágio e rodam como **usuário não-root** (`radar`, uid 1001, na API; `node`,
-  uid 1000, no frontend).
+- Ambos são multiestágio e rodam como **usuário não-root** (`radar`, uid 1001, na API; o usuário
+  já embutido em `nginx-unprivileged`, uid 101, no frontend).
 - A imagem da API **não contém dados**: nenhum Parquet é copiado. `/data/silver` não é pré-criado
   de propósito — sem a montagem, o `/health` responde 503 em vez de simular uma *silver* vazia.
 - A imagem da API traz apenas as dependências de runtime (`duckdb`, `fastapi`, `pydantic`,
   `pydantic-settings`, `uvicorn[standard]`); o extra `dev` (ruff/pytest/hypothesis/httpx) fica fora.
-- A imagem do frontend usa `output: 'standalone'` (`web/next.config.ts`): a imagem final não tem
-  `npm`, código TypeScript nem `node_modules` completo.
+- A imagem do frontend contém **apenas o conteúdo de `dist/`** servido por nginx: nem Node, nem
+  `npm`, nem `node_modules`, nem código TypeScript chegam à imagem final (~76 MB).
+- O nginx do frontend faz *fallback* para `index.html` em qualquer rota não-arquivo
+  (`web/nginx.conf`): sem isso, recarregar a página em `/panorama` ou `/comparativo` daria 404,
+  porque essas rotas só existem no roteador do cliente.
 - Ambas declaram `HEALTHCHECK`. O da API trata **200 e 503 como saudáveis** e só marca *unhealthy*
   quando o HTTP não responde — reiniciar o processo não conserta uma montagem ausente. A distinção
   200/503 é para a *readiness probe* do orquestrador (seção 6).
@@ -90,8 +93,8 @@ docker run --rm -p 8000:8000 \
 
 # Frontend — a URL da API entra no BUILD (ver seção 4)
 docker build -t radar-web:0.1.0-prod \
-  --build-arg NEXT_PUBLIC_API_URL=https://radar.exemplo.org web/
-docker run --rm -p 3000:3000 radar-web:0.1.0-prod
+  --build-arg VITE_API_URL=https://radar.exemplo.org web/
+docker run --rm -p 8080:8080 radar-web:0.1.0-prod
 ```
 
 ---
@@ -111,16 +114,16 @@ cd api
 python -m venv .venv && .venv/bin/pip install -e '.[dev]'
 RADAR_SILVER_ROOT=../data/silver .venv/bin/uvicorn radar_api.app:app --reload --port 8000
 
-# Qualidade (API): 216 testes coletados (pytest + hypothesis) e lint sem achados
+# Qualidade (API): 255 testes coletados (pytest + hypothesis) e lint sem achados
 .venv/bin/python -m pytest
 .venv/bin/python -m ruff check .
 
 # Frontend (desenvolvimento)
 cd web
 npm ci
-cp .env.example .env.local     # NEXT_PUBLIC_API_URL=http://localhost:8000
-npm run dev                    # http://localhost:3000
-npm run typecheck && npm run lint
+cp .env.example .env.local     # VITE_API_URL=http://localhost:8000
+npm run dev                    # http://localhost:5173
+npm run typecheck && npm test
 ```
 
 Sem `RADAR_SILVER_ROOT`, a API cai no padrão de desenvolvimento `<raiz-do-repo>/data/silver`,
@@ -151,23 +154,24 @@ diretório de trabalho também é lido — em contêiner, `/app`).
 Campos desconhecidos no ambiente são ignorados (`extra="ignore"`), então prefixar outras variáveis
 com `RADAR_` não quebra a inicialização. **A API não usa credenciais nem segredos.**
 
-### 4.2 Frontend — `NEXT_PUBLIC_API_URL`
+### 4.2 Frontend — `VITE_API_URL`
 
 | Variável | Significado | Padrão | Natureza |
 |---|---|---|---|
-| `NEXT_PUBLIC_API_URL` | URL base da API consumida pelo navegador | `http://localhost:8000` | **Tempo de build** |
-| `PORT` / `HOSTNAME` | Porta e interface do servidor standalone | `3000` / `0.0.0.0` | Runtime |
+| `VITE_API_URL` | URL base da API consumida pelo navegador | `http://localhost:8000` | **Tempo de build** |
 
-`NEXT_PUBLIC_*` é **inlineado no bundle do cliente** pelo `next build`. Consequências operacionais,
+`VITE_*` é **substituído literalmente no bundle** pelo `vite build`. Consequências operacionais,
 documentadas também no cabeçalho de `web/Dockerfile`:
 
-- Definir a variável em `docker run` **não** altera o código já compilado que roda no navegador.
+- Definir a variável em `docker run` **não** altera o JavaScript já compilado que roda no navegador.
 - A imagem do frontend é **específica do ambiente**: trocar a URL da API exige **reconstruir** a
-  imagem (`--build-arg NEXT_PUBLIC_API_URL=...`). Na prática, uma imagem por ambiente, com a URL
+  imagem (`--build-arg VITE_API_URL=...`). Na prática, uma imagem por ambiente, com a URL
   refletida na tag.
-- Alternativa (não implementada): mover a chamada para o servidor (Server Component ou rota
-  `app/api/*` como proxy), o que tornaria a URL uma configuração de runtime e permitiria uma única
-  imagem para todos os ambientes.
+- Alternativa (não implementada): servir um `config.json` ao lado do `index.html` e buscá-lo no
+  boot da aplicação, o que tornaria a URL uma configuração de runtime e permitiria uma única imagem
+  para todos os ambientes — ao custo de um ida-e-volta antes da primeira requisição útil.
+
+O contêiner não tem variáveis de runtime: a porta é fixa em 8080 e o nginx não lê ambiente.
 
 ---
 
@@ -438,7 +442,7 @@ Dimensionamento inicial, neutro em fornecedor, para começar e depois ajustar co
 | Recurso | Ponto de partida | Observação |
 |---|---|---|
 | Contêiner API | 1–2 vCPU, 1–2 GB RAM, 1–2 réplicas | DuckDB usa CPU e memória proporcionais ao recorte, não ao tamanho da edição. *Stateless*: escala horizontal é trivial. |
-| Contêiner web | 0,25–0,5 vCPU, 512 MB RAM, 1–2 réplicas | Só serve o app Next; sem estado. |
+| Contêiner web | 0,1–0,25 vCPU, 128 MB RAM, 1–2 réplicas | nginx servindo arquivos estáticos; sem estado. |
 | Armazenamento da *silver* | ~53 MB medidos hoje (dimensione ~1 GB para folga e futuras edições) | Somente leitura; custo desprezível em qualquer provedor. |
 | Borda | 1 balanceador/ingress com TLS | Normalmente o item de custo fixo mais relevante. |
 | Rede | Egresso do JSON agregado (respostas de poucos KB) | Ordem de grandeza pequena; sem transferência de microdados. |
@@ -523,7 +527,9 @@ O que **é** responsabilidade da implantação colocar na frente do serviço:
   garante que nada fique retido em buffer. Variáveis `UVICORN_*` (ex.: `UVICORN_LOG_LEVEL`) são
   honradas pelo CLI. **Não há logging estruturado (JSON) nem correlação de requisições** implementado
   — colete o stdout do contêiner e, se precisar de campos estruturados, isso é trabalho a fazer.
-- **Frontend**: `node server.js` escreve em stdout/stderr.
+- **Frontend**: o nginx da imagem escreve *access log* em stdout e erros em stderr. Como o
+  frontend só serve arquivos estáticos, esses logs falam sobre entrega de assets — erro de
+  aplicação acontece no navegador e não chega ao contêiner.
 - Nenhum dos dois grava arquivos de log em disco; a coleta é responsabilidade do plano de execução.
 
 ### 10.2 Quando `/health` está `degradado` (503)

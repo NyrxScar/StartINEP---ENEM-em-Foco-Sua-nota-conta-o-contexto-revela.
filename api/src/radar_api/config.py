@@ -66,12 +66,14 @@ class Config(BaseSettings):
     ambiente_referencia: str = "local"
     # RADAR_CORS_ORIGENS — origens permitidas para requisicoes cross-origin
     # do navegador (lista separada por virgula). O padrao cobre o frontend
-    # Next.js em desenvolvimento (portas 3000/3001, localhost e 127.0.0.1).
+    # Vite em desenvolvimento: 5173 (`npm run dev`) e 4173 (`npm run preview`),
+    # em localhost e 127.0.0.1 — o navegador trata os dois nomes como origens
+    # distintas, entao ambos precisam constar.
     # Em producao, com frontend e API na mesma origem (roteamento por caminho
     # no ingress), o CORS e desnecessario e esta lista pode ficar vazia.
     cors_origens: str = (
-        "http://localhost:3000,http://127.0.0.1:3000,"
-        "http://localhost:3001,http://127.0.0.1:3001"
+        "http://localhost:5173,http://127.0.0.1:5173,"
+        "http://localhost:4173,http://127.0.0.1:4173"
     )
 
     @model_validator(mode="after")
