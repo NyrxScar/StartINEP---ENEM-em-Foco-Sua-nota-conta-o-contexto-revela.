@@ -22,14 +22,16 @@ export default function Rodape() {
           <p className="prosa mt-2 text-sm leading-relaxed text-ink-60">
             Sua nota conta, o contexto revela. Todos os numeros sao agregados a partir
             dos microdados publicos do ENEM; nenhuma resposta individual e exibida ou
-            armazenada.
+            armazenada. A consulta por escola devolve agregados da instituicao, sujeitos
+            ao mesmo limiar de divulgacao.
           </p>
         </div>
 
         <div>
           <h2 className="text-[13px] font-semibold text-ink">O que esta ferramenta nao faz</h2>
           <ul className="prosa mt-2 space-y-1.5 text-sm text-ink-60">
-            <li>Nao identifica participantes nem escolas.</li>
+            <li>Nao identifica participantes.</li>
+            <li>Nao publica ranking de escolas.</li>
             <li>Nao estima o que uma edicao nao publicou.</li>
             <li>Nao exibe grupos pequenos demais para serem divulgados com seguranca.</li>
           </ul>

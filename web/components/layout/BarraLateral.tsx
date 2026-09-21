@@ -8,9 +8,9 @@
  *    precisar de moldura. O item ativo e marcado por uma regua ocre de 2px e
  *    texto mais claro — nao por uma pilula preenchida, que competiria com os
  *    graficos pelo mesmo recurso visual.
- * 2. **A limitacao aparece na navegacao.** Secoes sem endpoint que as sustente
- *    levam um "sem dados" discreto. A pessoa descobre o limite antes de clicar,
- *    e nao depois de esperar um carregamento que nunca vem.
+ * 2. **Nenhum distintivo de limitacao aqui.** Toda secao tem dado atras; o que
+ *    varia e por edicao, e cada pagina diz isso a partir da capacidade que a API
+ *    devolve. Marcar a limitacao no menu daria a entender que ela vale sempre.
  * 3. **Uma so marcacao para as duas larguras.** Em telas estreitas o mesmo
  *    elemento vira gaveta sobre a pagina (`aria-hidden` quando fechada, foco
  *    devolvido ao fechar); em telas largas e uma coluna fixa. Duplicar a lista
@@ -110,7 +110,7 @@ export default function BarraLateral({
         </div>
 
         <ul className="flex-1 space-y-0.5 overflow-y-auto px-3">
-          {NAVEGACAO.map(({ para, rotulo, descricao, icone: Icone, apoiada }) => (
+          {NAVEGACAO.map(({ para, rotulo, descricao, icone: Icone }) => (
             <li key={para}>
               <NavLink
                 to={para}
@@ -126,14 +126,7 @@ export default function BarraLateral({
               >
                 <Icone size={17} strokeWidth={1.75} aria-hidden="true" className="mt-0.5 shrink-0" />
                 <span className="min-w-0">
-                  <span className="flex items-center gap-2 font-medium">
-                    {rotulo}
-                    {!apoiada && (
-                      <span className="rounded-sm bg-white/10 px-1.5 py-px text-[10px] font-normal text-white/55">
-                        sem dados
-                      </span>
-                    )}
-                  </span>
+                  <span className="font-medium">{rotulo}</span>
                   <span className="mt-0.5 block text-xs leading-snug text-white/40">
                     {descricao}
                   </span>

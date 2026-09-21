@@ -54,9 +54,12 @@ import duckdb
 
 from radar_api.catalogo import DIMENSOES_PERFIL
 from radar_api.consulta import (
+    LIMITE_GRUPOS_PADRAO,
     construir_consulta_agregada,
+    construir_consulta_exploracao,
     construir_consulta_histograma,
     executar_agregada,
+    executar_exploracao,
     executar_histograma,
 )
 from radar_api.erros import (
@@ -68,19 +71,23 @@ from radar_api.erros import (
     ErroRecorteIndisponivel,
 )
 from radar_api.modelos import (
+    Dimensao,
     Distribuicao,
     FaixaHistograma,
+    GrupoExploracao,
     Linhagem,
     OmissaoEdicao,
     Quantis,
+    Recorte,
     ResultadoAnalise,
     ResultadoComparacao,
+    ResultadoExploracao,
 )
 from radar_api.privacidade import aplicar_limiar
 
 if TYPE_CHECKING:
     from radar_api.catalogo import Catalogo
-    from radar_api.modelos import Area, Capacidade, Recorte
+    from radar_api.modelos import Area, Capacidade
 
 # Chaves dos quantis na saida da consulta agregada (na ordem do modelo Quantis).
 _CHAVES_QUANTIS: tuple[str, ...] = ("q_min", "q1", "mediana", "q3", "q_max")
@@ -391,4 +398,122 @@ def comparar(
     return ResultadoComparacao(resultados=resultados, omissoes=omissoes)
 
 
-__all__ = ["analisar", "comparar", "verificar_capacidade_recorte"]
+def explorar(
+    catalogo: Catalogo,
+    edicao: int,
+    area: Area,
+    dimensao: Dimensao,
+    recorte: Recorte,
+    *,
+    limiar: int | None = None,
+    limite_grupos: int = LIMITE_GRUPOS_PADRAO,
+    con: duckdb.DuckDBPyConnection | None = None,
+) -> ResultadoExploracao:
+    """Descreve uma Area quebrada por todos os valores de uma Dimensao.
+
+    Responde "como a nota varia entre as UFs?" ou "entre escola publica e
+    privada?" — perguntas que, com ``analisar`` sozinho, exigiriam uma
+    requisicao por valor. Uma unica varredura com ``GROUP BY`` responde todas.
+
+    **A mesma guarda de privacidade se aplica grupo a grupo.** Cada grupo abaixo
+    do ``Limite_Minimo_de_Agregacao`` volta com os quantis anulados e
+    ``estatisticamente_insuficiente``. O ``valor`` do grupo continua visivel, em
+    coerencia com ``analisar``: a resposta admite que o grupo existe e que e
+    pequeno demais para ser descrito, em vez de omiti-lo e deixar quem le supor
+    que a lista e exaustiva.
+
+    **A capacidade e validada incluindo a Dimensao de agrupamento.** Agrupar por
+    uma Dimensao que a Edicao nao publica e tao invalido quanto filtrar por ela,
+    entao ambas passam pela mesma
+    :func:`verificar_capacidade_recorte` e produzem a mesma taxonomia de erro —
+    inclusive ``edicoes_que_suportam`` em ``RECORTE_INDISPONIVEL`` (Req 2.6).
+
+    Args:
+        catalogo: :class:`~radar_api.catalogo.Catalogo` injetado.
+        edicao: Ano da Edicao a explorar.
+        area: :class:`~radar_api.modelos.Area` de avaliacao.
+        dimensao: :class:`~radar_api.modelos.Dimensao` que define os grupos.
+        recorte: Filtros conjuntivos aplicados antes do agrupamento; vazio
+            significa explorar a Edicao inteira.
+        limiar: ``Limite_Minimo_de_Agregacao``; ``None`` usa o da configuracao.
+        limite_grupos: Teto de grupos devolvidos, do maior para o menor.
+        con: Conexao DuckDB opcional (injecao para testes). Se ``None``, uma
+            conexao efemera e aberta e fechada por esta funcao.
+
+    Returns:
+        Um :class:`~radar_api.modelos.ResultadoExploracao` com um grupo por valor
+        da Dimensao, ja processado pela guarda de privacidade.
+
+    Raises:
+        ErroEdicaoAusente: A Edicao nao existe na *silver* (Req 5.4).
+        ErroEdicaoSemNotas: A Edicao nao publica notas (Req 2.3).
+        ErroPerfilNaoCombinavel: Recorte ou agrupamento de perfil numa Edicao que
+            nao permite combina-lo com notas (Req 2.4).
+        ErroRecorteIndisponivel: A Edicao nao sustenta alguma Dimensao pedida
+            (Req 2.2/2.6).
+    """
+    limiar_efetivo = limiar if limiar is not None else catalogo.config.limiar_agregacao
+    info = catalogo.info_edicao(edicao)
+
+    # A Dimensao de agrupamento entra na validacao como se fosse um filtro: a
+    # regra de capacidade olha as chaves do Recorte, nao os valores, entao este
+    # Recorte sintetico reaproveita a taxonomia de erro inteira sem duplica-la.
+    # O valor e irrelevante e nunca chega ao SQL da exploracao.
+    recorte_validado = Recorte(filtros={**recorte.filtros, dimensao: ""})
+    verificar_capacidade_recorte(catalogo, edicao, info.capacidade, recorte_validado)
+
+    consulta = construir_consulta_exploracao(
+        catalogo.config.silver_root,
+        edicao,
+        area,
+        dimensao,
+        recorte,
+        limite_grupos=limite_grupos,
+    )
+
+    conexao = con if con is not None else duckdb.connect()
+    try:
+        linhas = executar_exploracao(conexao, consulta.sql, consulta.params)
+    finally:
+        if con is None:
+            conexao.close()
+
+    grupos: list[GrupoExploracao] = []
+    for linha in linhas:
+        tamanho = int(linha["tamanho_amostral"] or 0)
+        insuficiente = tamanho < limiar_efetivo
+        grupos.append(
+            GrupoExploracao(
+                valor=str(linha["valor"]),
+                tamanho_amostral=None if insuficiente else tamanho,
+                quantis=None
+                if insuficiente
+                else Quantis(
+                    minimo=float(linha["q_min"]),
+                    q1=float(linha["q1"]),
+                    mediana=float(linha["mediana"]),
+                    q3=float(linha["q3"]),
+                    maximo=float(linha["q_max"]),
+                ),
+                estatisticamente_insuficiente=insuficiente,
+            )
+        )
+
+    return ResultadoExploracao(
+        edicao=edicao,
+        area=area,
+        dimensao=dimensao,
+        grupos=grupos,
+        # `==` e nao `>=`: o LIMIT corta exatamente no teto, entao bater o teto e
+        # a unica evidencia disponivel de que havia mais valores.
+        grupos_truncados=len(linhas) == limite_grupos,
+        capacidade=info.capacidade,
+        linhagem=Linhagem(
+            edicoes=[edicao],
+            manifestos={edicao: info.manifesto_id},
+            datas_carga={edicao: info.data_carga},
+        ),
+    )
+
+
+__all__ = ["analisar", "comparar", "explorar", "verificar_capacidade_recorte"]

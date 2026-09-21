@@ -92,6 +92,9 @@ DIMENSOES_PERFIL: tuple[Dimensao, ...] = (
 SUSTENTACAO_CANONICA: dict[Dimensao, tuple[str, ...]] = {
     Dimensao.REGIAO: (Dimensao.REGIAO.value,),
     Dimensao.UF: (Dimensao.UF.value,),
+    Dimensao.MUNICIPIO: (Dimensao.MUNICIPIO.value,),
+    Dimensao.LOCALIZACAO_ESCOLA: (Dimensao.LOCALIZACAO_ESCOLA.value,),
+    Dimensao.CODIGO_ESCOLA: (Dimensao.CODIGO_ESCOLA.value,),
     Dimensao.TIPO_ESCOLA: (Dimensao.TIPO_ESCOLA.value,),
     Dimensao.DEP_ADM: (Dimensao.DEP_ADM.value,),
     Dimensao.RENDA: (Dimensao.RENDA.value,),

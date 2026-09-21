@@ -39,10 +39,15 @@ from typing import Any, NamedTuple
 
 import duckdb
 
-from radar_api.modelos import Area, Recorte
+from radar_api.modelos import Area, Dimensao, Recorte
 
 # Largura padrao (em pontos) de cada faixa do histograma de distribuicao.
 LARGURA_FAIXA_PADRAO = 100.0
+
+# Teto de grupos devolvidos por uma exploracao. Dimensionado para o maior
+# dominio real (``municipio_prova``, com mais de mil valores distintos por
+# Edicao) permanecer util sem que a resposta cresca sem limite.
+LIMITE_GRUPOS_PADRAO = 200
 
 
 class ConsultaSQL(NamedTuple):
@@ -317,3 +322,95 @@ __all__ = [
     "executar_agregada",
     "executar_histograma",
 ]
+
+
+def construir_consulta_exploracao(
+    silver_root: str | os.PathLike[str],
+    edicao: int,
+    area: Area,
+    dimensao: Dimensao,
+    recorte: Recorte,
+    *,
+    limite_grupos: int = LIMITE_GRUPOS_PADRAO,
+) -> ConsultaSQL:
+    """Monta a consulta que agrega a Area por valor de uma Dimensao.
+
+    Uma unica varredura com ``GROUP BY`` responde o que, de outra forma, exigiria
+    uma requisicao por valor da Dimensao — 27 para UF, mais de mil para municipio.
+    A *silver* e lida em modo agregacao-only: nenhuma linha individual cruza a
+    fronteira, apenas contagens e quantis por grupo (Req 6.4/9.1).
+
+    **Grupos nulos ficam de fora.** ``<dimensao> IS NOT NULL`` no ``WHERE`` evita
+    um grupo ``NULL`` que, em Dimensoes como ``localizacao_escola`` (preenchida
+    so para quem declara vinculo escolar), seria o maior da lista e nao
+    significaria "um valor", e sim "a coluna nao se aplica a estas pessoas".
+
+    **O limite e por seguranca de resposta, nao por privacidade.** ``municipio_prova``
+    tem mais de mil valores distintos; devolver todos de uma vez produziria uma
+    resposta grande sem utilidade pratica. A ordenacao e por tamanho do grupo
+    decrescente, entao o corte cai sempre nos grupos menores — que a guarda de
+    limiar suprimiria de qualquer forma.
+
+    Args:
+        silver_root: Raiz da camada *silver* (Parquet particionado).
+        edicao: Ano da Edicao a explorar.
+        area: Area de avaliacao; mapeia para a coluna ``nota_<area>``.
+        dimensao: Dimensao cujos valores viram os grupos.
+        recorte: Filtros conjuntivos aplicados **antes** do agrupamento, de modo
+            que a exploracao acontece dentro do recorte escolhido.
+        limite_grupos: Numero maximo de grupos devolvidos.
+
+    Returns:
+        Um :class:`ConsultaSQL` cujas linhas trazem ``valor``, ``tamanho_amostral``
+        e os quantis do grupo, do maior grupo para o menor.
+    """
+    coluna_nota = f"nota_{area.value}"
+    coluna_dim = dimensao.value
+    origem = _clausula_from(silver_root, edicao)
+    where, params_filtros = _clausula_where(coluna_nota, recorte)
+
+    sql = (
+        "WITH base AS (\n"
+        f"    SELECT CAST({coluna_dim} AS VARCHAR) AS valor, {coluna_nota} AS nota\n"
+        f"    FROM {origem}\n"
+        f"    WHERE {where}\n"
+        f"      AND {coluna_dim} IS NOT NULL\n"
+        ")\n"
+        "SELECT\n"
+        "    valor,\n"
+        "    count(*) AS tamanho_amostral,\n"
+        "    min(nota) AS q_min,\n"
+        "    quantile_cont(nota, 0.25) AS q1,\n"
+        "    quantile_cont(nota, 0.5) AS mediana,\n"
+        "    quantile_cont(nota, 0.75) AS q3,\n"
+        "    max(nota) AS q_max\n"
+        "FROM base\n"
+        "GROUP BY valor\n"
+        # Desempate por valor: sem ele, grupos de mesmo tamanho sairiam em ordem
+        # arbitraria e a mesma consulta poderia responder diferente entre chamadas.
+        "ORDER BY tamanho_amostral DESC, valor ASC\n"
+        "LIMIT ?"
+    )
+    params: list[Any] = [*params_filtros, int(limite_grupos)]
+    return ConsultaSQL(sql, params)
+
+
+def executar_exploracao(
+    con: duckdb.DuckDBPyConnection,
+    sql: str,
+    params: list[Any],
+) -> list[dict[str, Any]]:
+    """Executa a consulta de exploracao e devolve uma linha de agregados por grupo.
+
+    Args:
+        con: Conexao DuckDB ja aberta (o ciclo de vida e do chamador).
+        sql: SQL produzido por :func:`construir_consulta_exploracao`.
+        params: Parametros correspondentes, na ordem dos ``?``.
+
+    Returns:
+        Uma lista de ``dict``, um por valor da Dimensao, do maior grupo para o
+        menor. Lista vazia quando o recorte nao tem nenhuma linha elegivel.
+    """
+    cursor = con.execute(sql, params)
+    colunas = [descricao[0] for descricao in cursor.description]
+    return [dict(zip(colunas, linha, strict=True)) for linha in cursor.fetchall()]

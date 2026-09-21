@@ -30,8 +30,10 @@ import type {
   Recorte,
   RequisicaoAnalise,
   RequisicaoComparacao,
+  RequisicaoExploracao,
   ResultadoAnalise,
   ResultadoComparacao,
+  ResultadoExploracao,
   Saude,
 } from './tipos';
 
@@ -277,6 +279,25 @@ export function comparar(
   opcoes?: OpcoesRequisicao,
 ): Promise<ResultadoComparacao> {
   return requisitar<ResultadoComparacao>('/v1/comparacao', postJson(requisicao), opcoes);
+}
+
+/**
+ * `POST /v1/exploracao` — a mesma area quebrada por todos os valores de uma
+ * dimensao, em uma requisicao so.
+ *
+ * Existe para nao precisar disparar uma analise por valor: um quadro por UF
+ * seriam 27 requisicoes e 27 varreduras da base; aqui e uma. Cada grupo abaixo
+ * do limiar volta suprimido, com o valor visivel.
+ *
+ * @throws {ErroApi} `RECORTE_INDISPONIVEL` quando a edicao nao publica a
+ *   dimensao pedida (no agrupamento ou no recorte), `EDICAO_SEM_NOTAS`,
+ *   `PERFIL_NOTA_NAO_COMBINAVEL`, `EDICAO_AUSENTE`.
+ */
+export function explorar(
+  requisicao: RequisicaoExploracao,
+  opcoes?: OpcoesRequisicao,
+): Promise<ResultadoExploracao> {
+  return requisitar<ResultadoExploracao>('/v1/exploracao', postJson(requisicao), opcoes);
 }
 
 /** `GET /v1/edicoes` — edicoes disponiveis com manifesto e data de carga (Req 5.2). */

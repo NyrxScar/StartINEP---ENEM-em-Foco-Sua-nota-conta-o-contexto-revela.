@@ -242,9 +242,12 @@ não nulo). Tabela abaixo **medida** na *silver* local via `Catalogo.capacidade(
 
 | Edição | Possui notas | `perfil_combinavel_com_notas` | Dimensões suportadas |
 |---|---|---|---|
-| 2023 | sim | **sim** | `regiao`, `uf_prova`, `tipo_escola`, `dependencia_adm_escola`, `renda_familiar`, `cor_raca`, `escolaridade_pai`, `escolaridade_mae` |
-| 2024 | sim | **não** | `regiao`, `uf_prova`, `dependencia_adm_escola` |
-| 2025 | **não** | não | `regiao`, `uf_prova`, `renda_familiar`, `cor_raca`, `escolaridade_pai`, `escolaridade_mae` |
+| 2020 | sim | **sim** | `cor_raca`, `dependencia_adm_escola`, `escolaridade_mae`, `escolaridade_pai`, `localizacao_escola`, `municipio_prova`, `regiao`, `renda_familiar`, `tipo_escola`, `uf_prova` |
+| 2021 | sim | **sim** | `cor_raca`, `dependencia_adm_escola`, `escolaridade_mae`, `escolaridade_pai`, `localizacao_escola`, `municipio_prova`, `regiao`, `renda_familiar`, `tipo_escola`, `uf_prova` |
+| 2022 | sim | **sim** | `cor_raca`, `dependencia_adm_escola`, `escolaridade_mae`, `escolaridade_pai`, `localizacao_escola`, `municipio_prova`, `regiao`, `renda_familiar`, `tipo_escola`, `uf_prova` |
+| 2023 | sim | **sim** | `cor_raca`, `dependencia_adm_escola`, `escolaridade_mae`, `escolaridade_pai`, `localizacao_escola`, `municipio_prova`, `regiao`, `renda_familiar`, `tipo_escola`, `uf_prova` |
+| 2024 | sim | não | `codigo_escola`, `dependencia_adm_escola`, `localizacao_escola`, `municipio_prova`, `regiao`, `uf_prova` |
+| 2025 | **não** | não | `cor_raca`, `escolaridade_mae`, `escolaridade_pai`, `municipio_prova`, `regiao`, `renda_familiar`, `uf_prova` |
 
 Os nomes acima são os valores do enum `Dimensao` da API (`renda_familiar`, `escolaridade_pai`,
 `escolaridade_mae` correspondem às colunas brutas `Q006`, `Q001`, `Q002` do INEP).
@@ -265,7 +268,7 @@ Os nomes acima são os valores do enum `Dimensao` da API (`renda_familiar`, `esc
 
 | Condição | Status | Corpo |
 |---|---|---|
-| Raiz da *silver* legível | **200** | `{"status":"ok","silver_acessivel":true,"edicoes":[2023,2024,2025],"ambiente_referencia":"..."}` |
+| Raiz da *silver* legível | **200** | `{"status":"ok","silver_acessivel":true,"edicoes":[2020,2021,2022,2023,2024,2025],"ambiente_referencia":"..."}` |
 | Raiz inacessível | **503** | `{"status":"degradado","silver_acessivel":false,"edicoes":[],"ambiente_referencia":"..."}` |
 
 O endpoint **nunca lança exceção**: qualquer erro de sistema de arquivos é tratado como
@@ -337,13 +340,21 @@ sim.
 
 ### Rotas registradas hoje
 
-| Método | Caminho |
-|---|---|
-| `POST` | `/v1/analise` |
-| `POST` | `/v1/comparacao` |
-| `GET` | `/v1/edicoes` |
-| `GET` | `/v1/edicoes/{edicao}/capacidade` |
-| `GET` | `/health` |
+| Método | Caminho | O que responde |
+|---|---|---|
+| `POST` | `/v1/analise` | Distribuição e percentil de uma nota num recorte |
+| `POST` | `/v1/comparacao` | A mesma nota em várias edições, com as omissões |
+| `POST` | `/v1/exploracao` | Uma área quebrada por todos os valores de uma dimensão |
+| `GET` | `/v1/edicoes` | Edições carregadas, com manifesto e capacidade |
+| `GET` | `/v1/edicoes/{edicao}/capacidade` | Capacidade de uma edição |
+| `POST` | `/v1/ml/inferencia` | Previsão do modelo opcional (*gated*, 409 por padrão) |
+| `GET` | `/health` | *Readiness* |
+
+`POST /v1/exploracao` agrega com `GROUP BY` numa varredura só o que `POST /v1/analise`
+responderia em uma requisição por valor — 27 para um quadro por UF, mais de mil para
+município. Cada grupo abaixo do `Limite_Minimo_de_Agregacao` volta com os quantis anulados
+e `estatisticamente_insuficiente`, com o valor do grupo ainda visível. A resposta é limitada
+a 200 grupos, ordenados do maior para o menor, e marca `grupos_truncados` quando havia mais.
 
 O FastAPI também publica a especificação OpenAPI (`/openapi.json` e `/docs`) — se a exposição
 pública da documentação não for desejada, bloqueie esses caminhos na borda.
@@ -356,10 +367,13 @@ pública da documentação não for desejada, bloqueie esses caminhos na borda.
 
 | Edição | Linhas | Parquet em disco |
 |---|---|---|
-| 2023 | 3.933.955 | ~30 MB |
-| 2024 | 4.332.944 | ~22 MB |
-| 2025 | 4.810.772 | ~1 MB |
-| **Total** | **13.077.671** | **~53 MB** (81 arquivos) |
+| 2020 | 5.783.109 | ~40 MB |
+| 2021 | 3.389.832 | ~30 MB |
+| 2022 | 3.476.105 | ~31 MB |
+| 2023 | 3.933.955 | ~35 MB |
+| 2024 | 4.332.944 | ~28 MB |
+| 2025 | 4.810.772 | ~4 MB |
+| **Total** | **25.726.717** | **~167 MB** (162 arquivos) |
 
 O volume é pequeno em bytes porque as colunas são majoritariamente categóricas (dicionário + RLE) e,
 em 2025, as colunas de nota estão inteiramente nulas.

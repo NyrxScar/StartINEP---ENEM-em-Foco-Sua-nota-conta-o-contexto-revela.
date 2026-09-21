@@ -26,8 +26,11 @@ export type Area = 'cn' | 'ch' | 'lc' | 'mt' | 'redacao';
 export type Dimensao =
   | 'regiao'
   | 'uf_prova'
+  | 'municipio_prova'
   | 'tipo_escola'
   | 'dependencia_adm_escola'
+  | 'localizacao_escola'
+  | 'codigo_escola'
   | 'renda_familiar'
   | 'cor_raca'
   | 'escolaridade_pai'
@@ -37,8 +40,11 @@ export type Dimensao =
 export const ROTULOS_DIMENSAO: Record<Dimensao, string> = {
   regiao: 'Regiao',
   uf_prova: 'UF da prova',
+  municipio_prova: 'Municipio da prova',
   tipo_escola: 'Tipo de escola',
   dependencia_adm_escola: 'Dependencia administrativa',
+  localizacao_escola: 'Localizacao da escola',
+  codigo_escola: 'Codigo INEP da escola',
   renda_familiar: 'Renda familiar',
   cor_raca: 'Cor/raca',
   escolaridade_pai: 'Escolaridade do pai',
@@ -129,6 +135,45 @@ export interface ResultadoAnalise {
   percentil: number | null;
   tamanho_amostral: number | null;
   estatisticamente_insuficiente: boolean;
+  capacidade: Capacidade;
+  linhagem: Linhagem;
+}
+
+/** Corpo de `POST /v1/exploracao`. */
+export interface RequisicaoExploracao {
+  edicao: number;
+  area: Area;
+  /** Dimensao que define os grupos. */
+  dimensao: Dimensao;
+  /** Filtros aplicados *antes* do agrupamento. */
+  recorte: Recorte;
+}
+
+/**
+ * Um valor da dimensao e as estatisticas dentro dele.
+ *
+ * `tamanho_amostral` e `quantis` sao anulaveis pela mesma razao de
+ * `ResultadoAnalise`: quando o grupo nao atinge o limiar de divulgacao, a API
+ * anula os detalhes e marca `estatisticamente_insuficiente`. O `valor` continua
+ * preenchido de proposito — o grupo existe e e pequeno demais para ser descrito,
+ * o que e diferente de nao existir.
+ */
+export interface GrupoExploracao {
+  valor: string;
+  tamanho_amostral: number | null;
+  quantis: Quantis | null;
+  estatisticamente_insuficiente: boolean;
+}
+
+/** Resultado de `POST /v1/exploracao`. */
+export interface ResultadoExploracao {
+  edicao: number;
+  area: Area;
+  dimensao: Dimensao;
+  /** Um item por valor da dimensao, do maior grupo para o menor. */
+  grupos: GrupoExploracao[];
+  /** `true` quando havia mais valores do que o teto da consulta. */
+  grupos_truncados: boolean;
   capacidade: Capacidade;
   linhagem: Linhagem;
 }

@@ -18,7 +18,7 @@ import Layout from '@/components/layout/Layout';
 import { Esqueleto } from '@/components/ui/Carregando';
 import Diagnostico from '@/pages/Diagnostico';
 
-const RelatoriosEscolares = lazy(() => import('@/pages/RelatoriosEscolares'));
+const PerfilEscola = lazy(() => import('@/pages/PerfilEscola'));
 const Panorama = lazy(() => import('@/pages/Panorama'));
 const Comparativo = lazy(() => import('@/pages/Comparativo'));
 const Explorador = lazy(() => import('@/pages/Explorador'));
@@ -42,7 +42,7 @@ export default function App() {
           path="escolas"
           element={
             <Suspense fallback={<Aguardando />}>
-              <RelatoriosEscolares />
+              <PerfilEscola />
             </Suspense>
           }
         />

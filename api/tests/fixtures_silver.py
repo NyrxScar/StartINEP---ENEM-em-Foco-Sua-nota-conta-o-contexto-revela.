@@ -36,6 +36,9 @@ import duckdb
 # NAO inclui ``ano``/``uf_prova``: essas sao derivadas do caminho Hive.
 COLUNAS_FISICAS: tuple[tuple[str, str], ...] = (
     ("regiao", "VARCHAR"),
+    ("municipio_prova", "VARCHAR"),
+    ("codigo_escola", "VARCHAR"),
+    ("localizacao_escola", "TINYINT"),
     ("faixa_etaria", "TINYINT"),
     ("sexo", "VARCHAR"),
     ("cor_raca", "TINYINT"),

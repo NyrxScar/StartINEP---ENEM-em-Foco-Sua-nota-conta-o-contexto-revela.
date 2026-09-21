@@ -5,11 +5,11 @@
  * que acrescentar uma secao e editar um item — e nao tres arquivos que podem
  * divergir entre si.
  *
- * `apoiada` marca se a secao tem endpoint que a sustente. As duas secoes com
- * `apoiada: false` continuam navegaveis de proposito: a API do Radar ENEM e
- * agregada e anonimizada por desenho, sem dado por escola nem linha por
- * participante, e a interface prefere dizer isso em uma tela honesta a esconder
- * a secao e deixar a limitacao invisivel.
+ * Toda secao tem endpoint que a sustente. O que varia e *quanto* cada edicao
+ * publica: o perfil de escola depende de a pessoa declarar vinculo escolar, e a
+ * consulta por instituicao so funciona em 2024, unica edicao com CO_ESCOLA. Essa
+ * variacao e dita dentro de cada pagina, a partir da capacidade da edicao, e nao
+ * presumida aqui.
  */
 
 import {
@@ -26,7 +26,6 @@ export interface ItemNavegacao {
   rotulo: string;
   descricao: string;
   icone: LucideIcon;
-  apoiada: boolean;
 }
 
 export const NAVEGACAO: ItemNavegacao[] = [
@@ -35,34 +34,29 @@ export const NAVEGACAO: ItemNavegacao[] = [
     rotulo: 'Diagnostico',
     descricao: 'Sua nota dentro de um recorte comparavel',
     icone: LayoutDashboard,
-    apoiada: true,
   },
   {
     para: '/escolas',
-    rotulo: 'Relatorios por escola',
-    descricao: 'Desempenho agregado por instituicao',
+    rotulo: 'Perfil de escola',
+    descricao: 'Nota por tipo, rede e localizacao',
     icone: School,
-    apoiada: false,
   },
   {
     para: '/panorama',
     rotulo: 'Panorama ENEM',
     descricao: 'O que cada edicao publica',
     icone: ChartColumnBig,
-    apoiada: true,
   },
   {
     para: '/comparativo',
     rotulo: 'Comparar edicoes',
     descricao: 'A mesma nota ao longo dos anos',
     icone: GitCompareArrows,
-    apoiada: true,
   },
   {
     para: '/explorador',
     rotulo: 'Explorador de dados',
-    descricao: 'Consulta livre sobre a base',
+    descricao: 'Quebrar uma area por qualquer dimensao',
     icone: Database,
-    apoiada: false,
   },
 ];

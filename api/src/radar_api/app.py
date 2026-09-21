@@ -84,10 +84,12 @@ from radar_api.modelos import (
     Capacidade,
     RequisicaoAnalise,
     RequisicaoComparacao,
+    RequisicaoExploracao,
     ResultadoAnalise,
     ResultadoComparacao,
+    ResultadoExploracao,
 )
-from radar_api.nucleo import analisar, comparar, verificar_capacidade_recorte
+from radar_api.nucleo import analisar, comparar, explorar, verificar_capacidade_recorte
 
 # Codigo usado quando a validacao de entrada falha em um campo *fora* dos casos
 # nomeados pelo contrato (``nota``/``area``) — ex.: ``edicao`` nao inteira ou uma
@@ -415,6 +417,43 @@ def criar_app(config: Config | None = None) -> FastAPI:
             requisicao.edicao,
             requisicao.area,
             requisicao.nota,
+            requisicao.recorte,
+        )
+
+    @app.post("/v1/exploracao", response_model=ResultadoExploracao, tags=["analise"])
+    def post_exploracao(
+        requisicao: RequisicaoExploracao, catalogo: CatalogoInjetado
+    ) -> ResultadoExploracao:
+        """Uma Area quebrada por todos os valores de uma Dimensao (Req 2.2).
+
+        Responde de uma vez o que ``POST /v1/analise`` responderia em muitas
+        requisicoes: a distribuicao da Area em cada UF, em cada tipo de escola,
+        em cada municipio. O ganho nao e so de conveniencia — 27 requisicoes para
+        montar um quadro por UF sao 27 varreduras da *silver*, contra uma com
+        ``GROUP BY``.
+
+        **Nao ha nota nem percentil aqui.** A pergunta desta rota e sobre a forma
+        da distribuicao entre grupos, nao sobre a posicao de alguem dentro dela;
+        quem quer percentil usa ``POST /v1/analise``, que exige a nota.
+
+        A guarda de privacidade se aplica **grupo a grupo**: cada grupo abaixo do
+        ``Limite_Minimo_de_Agregacao`` volta com quantis anulados e
+        ``estatisticamente_insuficiente`` (Req 1.6/9.3). A Dimensao de
+        agrupamento passa pela mesma validacao de capacidade que um filtro de
+        Recorte, e portanto produz a mesma taxonomia de erro — agrupar por uma
+        Dimensao que a Edicao nao publica e tao invalido quanto filtrar por ela.
+
+        Sincrono de proposito, como as demais rotas: a consulta DuckDB e
+        bloqueante e o FastAPI a executa em *threadpool*.
+
+        Returns:
+            O :class:`~radar_api.modelos.ResultadoExploracao` da Edicao.
+        """
+        return explorar(
+            catalogo,
+            requisicao.edicao,
+            requisicao.area,
+            requisicao.dimensao,
             requisicao.recorte,
         )
 

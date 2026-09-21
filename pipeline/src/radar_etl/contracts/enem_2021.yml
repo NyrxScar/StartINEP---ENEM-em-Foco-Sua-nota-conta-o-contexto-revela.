@@ -1,0 +1,52 @@
+edicao: 2021
+versao_contrato: 1
+
+fonte:
+  url: "https://download.inep.gov.br/microdados/microdados_enem_2021.zip"
+  arquivo_csv: "DADOS/MICRODADOS_ENEM_2021.csv"
+  separador: ";"
+  encoding: "latin-1"
+
+# 2021 tem a mesma forma de 2023: arquivo unico de 76 colunas com as notas e o
+# perfil socioeconomico na mesma linha, ligados pelo mesmo participante. Sustenta
+# o corte "nota x perfil" completo.
+#
+# O caminho dentro do ZIP e diferente do de 2023: aqui os dados estao em
+# DADOS/ na raiz do pacote, sem a pasta microdados_enem_<ano>/ que as edicoes
+# recentes acrescentaram (verificado com zipfile.namelist()).
+
+# canonico: COLUNA_DE_ORIGEM
+mapeamento:
+  ano: NU_ANO
+  uf_prova: SG_UF_PROVA
+  municipio_prova: NO_MUNICIPIO_PROVA
+  localizacao_escola: TP_LOCALIZACAO_ESC
+  faixa_etaria: TP_FAIXA_ETARIA
+  sexo: TP_SEXO
+  cor_raca: TP_COR_RACA
+  tipo_escola: TP_ESCOLA
+  dependencia_adm_escola: TP_DEPENDENCIA_ADM_ESC
+  treineiro: IN_TREINEIRO
+  renda_familiar: Q006
+  escolaridade_pai: Q001
+  escolaridade_mae: Q002
+  presenca_cn: TP_PRESENCA_CN
+  presenca_ch: TP_PRESENCA_CH
+  presenca_lc: TP_PRESENCA_LC
+  presenca_mt: TP_PRESENCA_MT
+  nota_cn: NU_NOTA_CN
+  nota_ch: NU_NOTA_CH
+  nota_lc: NU_NOTA_LC
+  nota_mt: NU_NOTA_MT
+  nota_redacao: NU_NOTA_REDACAO
+
+derivadas:
+  regiao: regiao_por_uf
+
+ausentes:
+  codigo_escola: >-
+    CO_ESCOLA nao existe entre as 76 colunas de MICRODADOS_ENEM_2021.csv. Em 2021
+    o identificador de instituicao ainda estava fora dos microdados do ENEM; o
+    INEP so voltou a publica-lo em 2024. A escola aqui e caracterizada por
+    atributos (dependencia administrativa, localizacao urbana/rural), nunca
+    identificada. Ver ADR-0004.

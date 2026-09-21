@@ -28,10 +28,11 @@
  *    recorte, todo controle com `<label htmlFor>`, erros anunciados
  *    (`role="alert"`), mudancas de capacidade anunciadas (`aria-live="polite"`),
  *    e botao de envio com nome acessivel.
- * 5. **A barra de filtros mostra o que nao existe.** Municipio aparece como
- *    controle desabilitado com a razao ao lado, em vez de ser omitido: os
- *    microdados publicados nao trazem o municipio da escola, e esconder o
- *    controle faria a limitacao parecer um esquecimento da interface.
+ * 5. **A barra de filtros e derivada da capacidade, nao fixa.** Cada edicao
+ *    publica um conjunto diferente de dimensoes, entao os controles nascem de
+ *    `capacidade.dimensoes_suportadas` — nenhum filtro e escrito a mao aqui. O
+ *    resumo acima da barra nomeia o que ficou de fora e por que, para que a
+ *    ausencia de um controle seja informacao e nao um buraco silencioso.
  */
 
 import { Search, SlidersHorizontal } from 'lucide-react';
@@ -536,19 +537,6 @@ export default function FormularioAnalise({
               );
             })}
 
-            {/* Municipio nao existe no contrato da API. O controle aparece
-                desabilitado, com a razao, em vez de sumir da barra. */}
-            <Campo
-              id={`${base}-filtro-municipio`}
-              rotulo="Municipio"
-              ajuda="Os microdados publicados nao trazem o municipio; o recorte mais fino de localizacao e a UF."
-            >
-              {(props) => (
-                <Selecao {...props} disabled value="">
-                  <option value="">Nao publicado nos microdados</option>
-                </Selecao>
-              )}
-            </Campo>
           </div>
 
           {dimensoesDisponiveis.length === 0 && (

@@ -58,12 +58,22 @@ class Dimensao(str, Enum):  # noqa: UP042 — forma (str, Enum) fixada pelo desi
     *silver*, usado diretamente na montagem das clausulas SQL (ex.:
     ``renda_familiar`` para renda, ``escolaridade_pai``/``escolaridade_mae``
     para escolaridade dos pais).
+
+    Nem toda Edicao sustenta todas as Dimensoes, e a diferenca nao e uniforme:
+    ``municipio_prova`` existe em todas as Edicoes verificadas, ``codigo_escola``
+    so em 2024 (o INEP removeu o identificador de instituicao dos microdados e
+    voltou a publica-lo naquela edicao) e ``localizacao_escola`` depende de a
+    Edicao trazer atributos de escola. Quem sustenta o que e responsabilidade de
+    :class:`Capacidade`, derivada por Edicao — nunca presumida aqui.
     """
 
     REGIAO = "regiao"
     UF = "uf_prova"
+    MUNICIPIO = "municipio_prova"
     TIPO_ESCOLA = "tipo_escola"
     DEP_ADM = "dependencia_adm_escola"
+    LOCALIZACAO_ESCOLA = "localizacao_escola"
+    CODIGO_ESCOLA = "codigo_escola"
     RENDA = "renda_familiar"
     COR_RACA = "cor_raca"
     ESCOLARIDADE_PAI = "escolaridade_pai"
@@ -93,6 +103,24 @@ class RequisicaoAnalise(BaseModel):
     edicao: int
     area: Area
     nota: float = Field(ge=0, le=1000)
+    recorte: Recorte = Field(default_factory=Recorte)
+
+
+class RequisicaoExploracao(BaseModel):
+    """Requisicao de exploracao de uma Area por uma Dimensao (Req 1.1/2.2).
+
+    Irma de :class:`RequisicaoAnalise`, sem ``nota``: aqui a pergunta nao e
+    "onde estou?" e sim "como esta Area se distribui entre os valores desta
+    Dimensao?". Por isso nao ha percentil na resposta — nao existe nota de
+    referencia para posicionar.
+
+    ``recorte`` e aplicado **antes** do agrupamento, o que permite perguntas
+    encadeadas: agrupar por UF dentro do Nordeste, por exemplo.
+    """
+
+    edicao: int
+    area: Area
+    dimensao: Dimensao
     recorte: Recorte = Field(default_factory=Recorte)
 
 
@@ -178,6 +206,54 @@ class Linhagem(BaseModel):
     edicoes: list[int]
     manifestos: dict[int, str | None]
     datas_carga: dict[int, datetime | None]
+
+
+class GrupoExploracao(BaseModel):
+    """Um valor de Dimensao e as estatisticas da Area dentro dele.
+
+    Os campos estatisticos sao anulaveis pela mesma razao de
+    :class:`ResultadoAnalise`: quando o grupo nao atinge o
+    ``Limite_Minimo_de_Agregacao``, a guarda de privacidade anula os detalhes e
+    marca ``estatisticamente_insuficiente``. O grupo continua na resposta, com o
+    ``valor`` visivel — a interface diz que o grupo existe e que e pequeno demais
+    para ser descrito, em vez de fingir que ele nao existe (Req 1.6/9.3).
+
+    Attributes:
+        valor: Valor da Dimensao, sempre como texto (e o que a *silver* compara).
+        tamanho_amostral: Pessoas com nota valida na Area dentro do grupo.
+        quantis: Resumo por quantis das notas do grupo.
+        estatisticamente_insuficiente: Grupo abaixo do limiar de divulgacao.
+    """
+
+    valor: str
+    tamanho_amostral: int | None
+    quantis: Quantis | None
+    estatisticamente_insuficiente: bool
+
+
+class ResultadoExploracao(BaseModel):
+    """Resposta de ``POST /v1/exploracao``: uma Area vista por uma Dimensao.
+
+    Attributes:
+        edicao: Edicao explorada.
+        area: Area de avaliacao.
+        dimensao: Dimensao usada para agrupar.
+        grupos: Um item por valor da Dimensao, do maior grupo para o menor.
+        grupos_truncados: ``True`` quando existiam mais valores do que o teto de
+            grupos da consulta, de modo que a lista nao e exaustiva. Explicito
+            para que a interface possa dizer isso, em vez de a pessoa supor que
+            viu todos os municipios do pais.
+        capacidade: Capacidade da Edicao (Req 2.5).
+        linhagem: Procedencia dos dados (Req 5.1).
+    """
+
+    edicao: int
+    area: Area
+    dimensao: Dimensao
+    grupos: list[GrupoExploracao]
+    grupos_truncados: bool
+    capacidade: Capacidade
+    linhagem: Linhagem
 
 
 class ResultadoAnalise(BaseModel):

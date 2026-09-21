@@ -59,13 +59,69 @@ _requer_silver_real = pytest.mark.skipif(
 # Tabela de Capacidade VERIFICADA das Edicoes reais (restricao de
 # desidentificacao do INEP — Req 2.1): dimensoes suportadas, presenca de notas e
 # combinabilidade perfil+notas por Edicao.
+# 2020 a 2023 publicam o arquivo unico que liga nota e perfil na mesma linha, e
+# por isso sustentam as dez dimensoes. 2024 separou o questionario em um arquivo
+# de chave propria (ADR-0004) e perdeu o perfil, mas e a unica que traz
+# ``codigo_escola`` — o INEP retirou o identificador de instituicao dos
+# microdados e so o republicou nessa edicao. 2025 ainda nao teve resultados
+# publicados, entao nao tem notas nem atributo de escola.
 _CAPACIDADES_ESPERADAS: dict[int, dict[str, object]] = {
+    2020: {
+        "dims": {
+            Dimensao.REGIAO,
+            Dimensao.UF,
+            Dimensao.MUNICIPIO,
+            Dimensao.TIPO_ESCOLA,
+            Dimensao.DEP_ADM,
+            Dimensao.LOCALIZACAO_ESCOLA,
+            Dimensao.RENDA,
+            Dimensao.COR_RACA,
+            Dimensao.ESCOLARIDADE_PAI,
+            Dimensao.ESCOLARIDADE_MAE,
+        },
+        "possui_notas": True,
+        "perfil_combinavel_com_notas": True,
+    },
+    2021: {
+        "dims": {
+            Dimensao.REGIAO,
+            Dimensao.UF,
+            Dimensao.MUNICIPIO,
+            Dimensao.TIPO_ESCOLA,
+            Dimensao.DEP_ADM,
+            Dimensao.LOCALIZACAO_ESCOLA,
+            Dimensao.RENDA,
+            Dimensao.COR_RACA,
+            Dimensao.ESCOLARIDADE_PAI,
+            Dimensao.ESCOLARIDADE_MAE,
+        },
+        "possui_notas": True,
+        "perfil_combinavel_com_notas": True,
+    },
+    2022: {
+        "dims": {
+            Dimensao.REGIAO,
+            Dimensao.UF,
+            Dimensao.MUNICIPIO,
+            Dimensao.TIPO_ESCOLA,
+            Dimensao.DEP_ADM,
+            Dimensao.LOCALIZACAO_ESCOLA,
+            Dimensao.RENDA,
+            Dimensao.COR_RACA,
+            Dimensao.ESCOLARIDADE_PAI,
+            Dimensao.ESCOLARIDADE_MAE,
+        },
+        "possui_notas": True,
+        "perfil_combinavel_com_notas": True,
+    },
     2023: {
         "dims": {
             Dimensao.REGIAO,
             Dimensao.UF,
+            Dimensao.MUNICIPIO,
             Dimensao.TIPO_ESCOLA,
             Dimensao.DEP_ADM,
+            Dimensao.LOCALIZACAO_ESCOLA,
             Dimensao.RENDA,
             Dimensao.COR_RACA,
             Dimensao.ESCOLARIDADE_PAI,
@@ -75,7 +131,14 @@ _CAPACIDADES_ESPERADAS: dict[int, dict[str, object]] = {
         "perfil_combinavel_com_notas": True,
     },
     2024: {
-        "dims": {Dimensao.REGIAO, Dimensao.UF, Dimensao.DEP_ADM},
+        "dims": {
+            Dimensao.REGIAO,
+            Dimensao.UF,
+            Dimensao.MUNICIPIO,
+            Dimensao.DEP_ADM,
+            Dimensao.LOCALIZACAO_ESCOLA,
+            Dimensao.CODIGO_ESCOLA,
+        },
         "possui_notas": True,
         "perfil_combinavel_com_notas": False,
     },
@@ -83,6 +146,7 @@ _CAPACIDADES_ESPERADAS: dict[int, dict[str, object]] = {
         "dims": {
             Dimensao.REGIAO,
             Dimensao.UF,
+            Dimensao.MUNICIPIO,
             Dimensao.RENDA,
             Dimensao.COR_RACA,
             Dimensao.ESCOLARIDADE_PAI,
@@ -255,15 +319,22 @@ def test_manifesto_malformado_degrada_para_ausente_sem_etl(tmp_path: Path) -> No
 @pytest.mark.parametrize(
     ("dims", "esperado"),
     [
-        ({Dimensao.REGIAO}, [2023, 2024, 2025]),
-        ({Dimensao.RENDA}, [2023, 2025]),
-        ({Dimensao.TIPO_ESCOLA}, [2023]),
+        ({Dimensao.REGIAO}, [2020, 2021, 2022, 2023, 2024, 2025]),
+        ({Dimensao.MUNICIPIO}, [2020, 2021, 2022, 2023, 2024, 2025]),
+        ({Dimensao.RENDA}, [2020, 2021, 2022, 2023, 2025]),
+        ({Dimensao.TIPO_ESCOLA}, [2020, 2021, 2022, 2023]),
+        ({Dimensao.CODIGO_ESCOLA}, [2024]),
+        ({Dimensao.CODIGO_ESCOLA, Dimensao.RENDA}, []),
     ],
 )
 def test_edicoes_que_suportam_dados_reais(dims: set[Dimensao], esperado: list[int]) -> None:
     """``edicoes_que_suportam`` retorna, em ordem crescente, as Edicoes cuja
     Capacidade contem as dimensoes pedidas (Req 2.6), conforme a tabela
-    verificada: regiao em todas; renda em 2023/2025; tipo de escola so em 2023."""
+    verificada: regiao e municipio em todas; renda em todas menos 2024; tipo de
+    escola nas quatro com arquivo unico; codigo de escola so em 2024.
+
+    O ultimo caso e o que prova a regra: nenhuma Edicao sustenta ao mesmo tempo
+    o codigo da escola e a renda, porque quem tem um perdeu o outro."""
     catalogo = Catalogo(Config(silver_root=_SILVER_REAL))
 
     assert catalogo.edicoes_que_suportam(dims) == esperado

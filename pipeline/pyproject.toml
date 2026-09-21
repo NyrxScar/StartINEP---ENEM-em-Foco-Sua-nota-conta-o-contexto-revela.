@@ -1,0 +1,45 @@
+[project]
+name = "radar-etl"
+version = "0.1.0"
+description = "Pipeline de ingestao dos microdados do ENEM - Radar ENEM"
+requires-python = ">=3.12"
+dependencies = [
+    "duckdb>=1.1",
+    "pyarrow>=17",
+    "pydantic>=2.8",
+    "pyyaml>=6.0",
+    "typer>=0.12",
+    "httpx>=0.27",
+    "certifi>=2024.0.0",
+]
+
+[project.scripts]
+radar-etl = "radar_etl.cli:app"
+
+[dependency-groups]
+dev = ["pytest>=8.3", "hypothesis>=6.100", "ruff>=0.6"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/radar_etl"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# Conjunto fixado deliberadamente: um default nao fixado faz um upgrade do ruff
+# quebrar o lint em codigo intocado.
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.flake8-bugbear]
+# typer.Option(Path(...)) e o idioma do Typer para default de caminho; B008 aqui
+# e falso positivo.
+extend-immutable-calls = ["pathlib.Path"]

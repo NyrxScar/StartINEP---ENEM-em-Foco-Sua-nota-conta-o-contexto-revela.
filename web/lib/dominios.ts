@@ -7,11 +7,15 @@
  *
  * - dimensoes cujo dominio e estavel e derivado da propria estrutura da silver
  *   ou do dicionario publico dos microdados (`regiao`, `uf_prova`, `tipo_escola`,
- *   `dependencia_adm_escola`, `cor_raca`) ganham um `<select>` com rotulos
- *   legiveis e o **valor fisico** como `value`;
+ *   `dependencia_adm_escola`, `localizacao_escola`, `cor_raca`) ganham um
+ *   `<select>` com rotulos legiveis e o **valor fisico** como `value`;
  * - dimensoes cuja normalizacao a silver nao fixa no contrato
  *   (`renda_familiar`, `escolaridade_pai`, `escolaridade_mae` — derivadas de
- *   Q006/Q001/Q002) ficam sem lista e o formulario oferece um campo de texto.
+ *   Q006/Q001/Q002) ficam sem lista e o formulario oferece um campo de texto;
+ * - `municipio_prova` e `codigo_escola` tem dominio grande demais para uma lista
+ *   estatica (mais de mil municipios por edicao, dezenas de milhares de escolas)
+ *   e mudam a cada edicao. Ficam como entrada livre, e `POST /v1/exploracao`
+ *   e o caminho para descobrir quais valores existem de fato.
  *
  * `regiao` segue os rotulos do ETL (`sql_case_regiao`): Norte, Nordeste,
  * Sudeste, Sul, Centro-Oeste.
@@ -83,6 +87,10 @@ export const OPCOES_DIMENSAO: Partial<Record<Dimensao, OpcaoValor[]>> = {
     { valor: '3', rotulo: 'Municipal' },
     { valor: '4', rotulo: 'Privada' },
   ],
+  localizacao_escola: [
+    { valor: '1', rotulo: 'Urbana' },
+    { valor: '2', rotulo: 'Rural' },
+  ],
   cor_raca: [
     { valor: '0', rotulo: 'Nao declarado' },
     { valor: '1', rotulo: 'Branca' },
@@ -105,4 +113,20 @@ export const DIMENSOES_PERFIL: readonly Dimensao[] = [
   'cor_raca',
   'escolaridade_pai',
   'escolaridade_mae',
+];
+
+/**
+ * Dimensoes que descrevem a **escola** do participante, e nao ele proprio.
+ *
+ * Alimentam a secao de perfil de escola. `codigo_escola` identifica a
+ * instituicao (so a edicao 2024 o publica); as demais a caracterizam sem
+ * identificar. Todas dependem de a pessoa declarar vinculo escolar, o que cobre
+ * entre um quinto e um terco dos participantes conforme a edicao — qualquer
+ * leitura sobre elas vale para esse subconjunto, nunca para a edicao inteira.
+ */
+export const DIMENSOES_ESCOLA: readonly Dimensao[] = [
+  'tipo_escola',
+  'dependencia_adm_escola',
+  'localizacao_escola',
+  'codigo_escola',
 ];

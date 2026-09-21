@@ -1,0 +1,51 @@
+edicao: 2023
+versao_contrato: 2
+
+fonte:
+  url: "https://download.inep.gov.br/microdados/microdados_enem_2023.zip"
+  arquivo_csv: "microdados_enem_2023/DADOS/MICRODADOS_ENEM_2023.csv"
+  separador: ";"
+  encoding: "latin-1"
+
+# 2023 e a base principal do produto: arquivo unico, 76 colunas, com as notas e
+# o perfil socioeconomico na mesma linha (mesmo NU_INSCRICAO). E a unica das
+# tres edicoes que sustenta o corte "nota x perfil socioeconomico" completo.
+
+# canonico: COLUNA_DE_ORIGEM
+mapeamento:
+  ano: NU_ANO
+  uf_prova: SG_UF_PROVA
+  municipio_prova: NO_MUNICIPIO_PROVA
+  localizacao_escola: TP_LOCALIZACAO_ESC
+  faixa_etaria: TP_FAIXA_ETARIA
+  sexo: TP_SEXO
+  cor_raca: TP_COR_RACA
+  tipo_escola: TP_ESCOLA
+  dependencia_adm_escola: TP_DEPENDENCIA_ADM_ESC
+  treineiro: IN_TREINEIRO
+  renda_familiar: Q006
+  escolaridade_pai: Q001
+  escolaridade_mae: Q002
+  presenca_cn: TP_PRESENCA_CN
+  presenca_ch: TP_PRESENCA_CH
+  presenca_lc: TP_PRESENCA_LC
+  presenca_mt: TP_PRESENCA_MT
+  nota_cn: NU_NOTA_CN
+  nota_ch: NU_NOTA_CH
+  nota_lc: NU_NOTA_LC
+  nota_mt: NU_NOTA_MT
+  nota_redacao: NU_NOTA_REDACAO
+
+derivadas:
+  regiao: regiao_por_uf
+
+# 2023 cobre 22 das 23 colunas canonicas a partir do cabecalho real de
+# microdados_enem_2023/DADOS/MICRODADOS_ENEM_2023.csv (76 colunas ao todo).
+# A unica ausencia e o codigo da escola.
+ausentes:
+  codigo_escola: >-
+    CO_ESCOLA nao existe entre as 76 colunas de MICRODADOS_ENEM_2023.csv. O INEP
+    havia removido o identificador de instituicao dos microdados do ENEM e so
+    voltou a publica-lo em 2024 (RESULTADOS_2024.csv). Nesta edicao a escola so
+    pode ser caracterizada por atributos — dependencia administrativa,
+    localizacao urbana/rural e municipio — nunca identificada. Ver ADR-0004.
