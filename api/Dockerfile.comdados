@@ -1,0 +1,29 @@
+# syntax=docker/dockerfile:1
+# ============================================================================
+# Variante da imagem da API com a camada silver EMBUTIDA.
+#
+# Motivo: no Azure for Students o ambiente do Container Apps é "express" e NÃO
+# suporta montar Azure Files como volume. Como a silver tem só ~167 MB, a opção
+# mais simples e robusta é copiá-la para dentro da imagem.
+#
+# IMPORTANTE: o contexto de build precisa ser a RAIZ do repositório (não `api/`),
+# porque é lá que vive `data/silver`. Build:
+#
+#   docker build -t <acr>/radar-api-comdados:v1 -f api/Dockerfile.comdados .
+#
+# A imagem base `radar-api-base:v1` é a imagem normal já construída a partir de
+# `api/Dockerfile`. Aqui só acrescentamos os dados e fixamos RADAR_SILVER_ROOT.
+# ============================================================================
+
+ARG BASE_IMAGE=radar-api-base:v1
+FROM ${BASE_IMAGE}
+
+# A silver é copiada para um caminho fixo dentro da imagem. O usuário do
+# contêiner (radar, não-root) só precisa de leitura; o COPY entra como root e
+# os arquivos ficam legíveis para todos por padrão.
+COPY data/silver /data/silver
+
+# Aponta a API para a silver embutida (sobrescreve o default do Dockerfile base).
+ENV RADAR_SILVER_ROOT=/data/silver
+
+# Entrypoint, usuário, porta e healthcheck são herdados da imagem base.

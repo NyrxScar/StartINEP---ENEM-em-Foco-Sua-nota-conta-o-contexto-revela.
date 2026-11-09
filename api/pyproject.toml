@@ -8,7 +8,10 @@ version = "0.1.0"
 description = "API estatistica do Radar ENEM (camada de analise sobre a camada silver)"
 requires-python = ">=3.12"
 dependencies = [
-    "duckdb>=1.1",
+    # Fixado na serie 1.x: o DuckDB 2.0 removeu Relation.fetchone()
+    # (usado em catalogo.py), quebrando /v1/edicoes em runtime. A serie 1.x
+    # e a que o projeto foi desenvolvido/testado (local: 1.5.5).
+    "duckdb>=1.1,<2",
     "fastapi>=0.115",
     "pydantic>=2.8",
     "pydantic-settings>=2.4",

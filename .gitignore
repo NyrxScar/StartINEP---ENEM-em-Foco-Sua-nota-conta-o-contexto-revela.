@@ -242,3 +242,8 @@ out/
 # O padrao `lib/` acima (empacotamento Python) tambem capturaria `web/lib/`,
 # onde vive o cliente de API tipado do frontend. Reintroduz esse diretorio.
 !web/lib/
+
+# Variáveis e segredos do deploy Azure (contém chaves de storage)
+.azure-deploy-vars.sh
+api-app.yaml
+.docker-deploy/

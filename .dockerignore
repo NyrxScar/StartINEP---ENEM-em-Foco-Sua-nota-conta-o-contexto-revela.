@@ -1,0 +1,48 @@
+# .dockerignore da RAIZ — usado apenas pelo build de api/Dockerfile.comdados,
+# que precisa da raiz como contexto para enxergar data/silver.
+#
+# Objetivo: manter o contexto pequeno. A silver (~167 MB) é o ÚNICO dado que
+# deve entrar; todo o resto (bronze de 12 GB, venvs, caches, node_modules,
+# git) fica de fora.
+
+# Dados pesados: barra tudo em data/, exceto a silver.
+data/*
+!data/silver
+!data/silver/**
+
+# Ambientes virtuais e dependências
+.venv/
+**/.venv/
+web/node_modules/
+node_modules/
+
+# Caches de ferramentas
+__pycache__/
+**/__pycache__/
+.ruff_cache/
+**/.ruff_cache/
+.pytest_cache/
+**/.pytest_cache/
+.hypothesis/
+**/.hypothesis/
+.mypy_cache/
+
+# Git e metadados
+.git/
+.gitignore
+.github/
+.kiro/
+.superpowers/
+
+# Build do frontend e artefatos
+web/dist/
+dist/
+build/
+*.egg-info/
+
+# Config/segredos locais de deploy
+.docker-deploy/
+.azure-deploy-vars.sh
+api-app.yaml
+*.pem
+*.key
